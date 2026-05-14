@@ -1,51 +1,102 @@
-import React, { useState, useEffect } from 'react'
-import Sidebar from './components/Sidebar.jsx'
-import KanbanBoard from './components/KanbanBoard.jsx'
-import AnnualPlanView from './components/AnnualPlanView.jsx'
-import ForecastingView from './components/ForecastingView.jsx'
-import { INITIAL_BOARD_STATE } from './data/seedData.js'
-
-const STORAGE_KEY = 'snapscale-kanban-v1'
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch (e) {}
-  return null
-}
-
-function saveState(state) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
-  } catch (e) {}
-}
+import React, { useCallback } from 'react'
+import Header from './components/Header'
+import TabNav from './components/TabNav'
+import BudgetDashboard from './components/BudgetDashboard'
+import FilterBar from './components/FilterBar'
+import Board from './components/Board'
+import CardDetail from './components/CardDetail'
+import SpreadsheetView from './components/SpreadsheetView'
+import BudgetBuilder from './components/BudgetBuilder'
+import { useBoard } from './hooks/useBoard'
+import { useBudget } from './hooks/useBudget'
+import { REPURPOSING_CHECKLIST } from './data/seedData'
 
 export default function App() {
-  const [activeView, setActiveView] = useState('podcast-webinar')
-  const [boardState, setBoardState] = useState(() => loadState() || INITIAL_BOARD_STATE)
+  const {
+    boardState,
+    activeTab,
+    setActiveTab,
+    selectedCard,
+    openCard,
+    closeCard,
+    filters,
+    setFilters,
+    view,
+    setView,
+    onDragEnd,
+    addCard,
+    updateCard,
+    deleteCard,
+    moveCard,
+    getAllCards,
+    getFilteredColumns,
+  } = useBoard()
 
-  useEffect(() => {
-    saveState(boardState)
-  }, [boardState])
+  const { budgetStats } = useBudget(getAllCards)
 
-  const isKanban = activeView === 'podcast-webinar' || activeView === 'trade-show' || activeView === 'paid-ads'
+  const handleNewCampaign = useCallback(() => {
+    const typeMap = {
+      'podcast-webinar': 'Podcast / Webinar',
+      'trade-show': 'Trade Show',
+      'paid-ads': 'Paid Ads / Digital',
+    }
+    const isWebinar = activeTab === 'podcast-webinar'
+    const newCard = addCard(activeTab, 'backlog', {
+      name: 'New Campaign',
+      campaignType: typeMap[activeTab] || '',
+      checklist: isWebinar ? REPURPOSING_CHECKLIST.map(i => ({ ...i })) : [],
+    })
+    if (newCard) {
+      setTimeout(() => openCard(newCard, activeTab, 'backlog'), 100)
+    }
+  }, [activeTab, addCard, openCard])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-snap-bg font-sans">
-      <Sidebar activeView={activeView} setActiveView={setActiveView} boardState={boardState} />
-      <main className="flex-1 overflow-auto">
-        {isKanban && (
-          <KanbanBoard
-            key={activeView}
-            boardKey={activeView}
-            columns={boardState[activeView] || {}}
-            setBoardState={setBoardState}
+    <div className="flex flex-col h-screen overflow-hidden bg-[#F4F5F7]">
+      <Header view={view} setView={setView} onNewCampaign={handleNewCampaign} />
+      <BudgetDashboard budgetStats={budgetStats} />
+
+      {view !== 'budget' && (
+        <TabNav activeTab={activeTab} setActiveTab={setActiveTab} boardState={boardState} />
+      )}
+
+      {view !== 'budget' && (
+        <FilterBar filters={filters} setFilters={setFilters} onNewCampaign={handleNewCampaign} />
+      )}
+
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        {view === 'kanban' && (
+          <Board
+            activeTab={activeTab}
+            boardState={boardState}
+            filters={filters}
+            onDragEnd={onDragEnd}
+            openCard={openCard}
+            addCard={addCard}
+            getFilteredColumns={getFilteredColumns}
           />
         )}
-        {activeView === 'annual-plan' && <AnnualPlanView />}
-        {activeView === 'forecasting' && <ForecastingView />}
-      </main>
+        {view === 'spreadsheet' && (
+          <SpreadsheetView
+            getAllCards={getAllCards}
+            openCard={openCard}
+            addCard={addCard}
+          />
+        )}
+        {view === 'budget' && (
+          <BudgetBuilder />
+        )}
+      </div>
+
+      {selectedCard && (
+        <CardDetail
+          card={selectedCard}
+          onClose={closeCard}
+          onUpdate={updateCard}
+          onDelete={deleteCard}
+          onMove={moveCard}
+        />
+      )}
     </div>
   )
 }
