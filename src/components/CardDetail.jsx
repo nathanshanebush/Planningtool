@@ -22,7 +22,8 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
   const [duplicated, setDuplicated] = useState(false)
   const panelRef = useRef(null)
 
-  useEffect(() => { setLocal(card) }, [card])
+  // Only reset local when a *different* card is opened — not on every auto-save
+  useEffect(() => { setLocal(card) }, [card.id])
 
   useEffect(() => {
     const handleKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -104,8 +105,10 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
     onClose()
   }
 
-  const roi = local.annualBudget > 0 && local.revenueEarned > 0
-    ? (local.revenueEarned / local.annualBudget).toFixed(1) + '×'
+  const roiNum = Number(local.annualBudget)
+  const revNum = Number(local.revenueEarned)
+  const roi = roiNum > 0 && revNum > 0
+    ? (revNum / roiNum).toFixed(2) + '×'
     : '—'
 
   const checklistDone = (local.checklist || []).filter(i => i.done).length
@@ -260,11 +263,11 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
               <Label>Monthly Budget ($)</Label>
               <input
                 type="number"
-                value={local.budget || ''}
-                onChange={e => setLocal(p => ({ ...p, budget: Number(e.target.value) }))}
+                value={local.budget ?? ''}
+                onChange={e => setLocal(p => ({ ...p, budget: e.target.value === '' ? '' : Number(e.target.value) }))}
                 onBlur={e => {
-                  const val = Number(e.target.value)
-                  saveMulti({ budget: val, annualBudget: local.annualBudget || val * 12 })
+                  const val = e.target.value === '' ? 0 : Number(e.target.value)
+                  saveMulti({ budget: val, annualBudget: local.annualBudget !== '' && local.annualBudget > 0 ? local.annualBudget : val * 12 })
                 }}
                 className="w-full font-mono text-sm border border-[#DFE1E6] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#4C9AFF] text-[#172B4D]"
                 placeholder="0"
@@ -274,9 +277,9 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
               <Label>Annual Budget ($)</Label>
               <input
                 type="number"
-                value={local.annualBudget || ''}
-                onChange={e => setLocal(p => ({ ...p, annualBudget: Number(e.target.value) }))}
-                onBlur={e => save('annualBudget', Number(e.target.value))}
+                value={local.annualBudget ?? ''}
+                onChange={e => setLocal(p => ({ ...p, annualBudget: e.target.value === '' ? '' : Number(e.target.value) }))}
+                onBlur={e => save('annualBudget', e.target.value === '' ? 0 : Number(e.target.value))}
                 className="w-full font-mono text-sm border border-[#DFE1E6] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#4C9AFF] text-[#172B4D]"
                 placeholder="0"
               />
@@ -285,9 +288,9 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
               <Label>Spend to Date ($)</Label>
               <input
                 type="number"
-                value={local.spendToDate || ''}
-                onChange={e => setLocal(p => ({ ...p, spendToDate: Number(e.target.value) }))}
-                onBlur={e => save('spendToDate', Number(e.target.value))}
+                value={local.spendToDate ?? ''}
+                onChange={e => setLocal(p => ({ ...p, spendToDate: e.target.value === '' ? '' : Number(e.target.value) }))}
+                onBlur={e => save('spendToDate', e.target.value === '' ? 0 : Number(e.target.value))}
                 className="w-full font-mono text-sm border border-[#DFE1E6] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#4C9AFF] text-[#172B4D]"
                 placeholder="0"
               />
@@ -296,9 +299,9 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
               <Label>Revenue Earned ($)</Label>
               <input
                 type="number"
-                value={local.revenueEarned || ''}
-                onChange={e => setLocal(p => ({ ...p, revenueEarned: Number(e.target.value) }))}
-                onBlur={e => save('revenueEarned', Number(e.target.value))}
+                value={local.revenueEarned ?? ''}
+                onChange={e => setLocal(p => ({ ...p, revenueEarned: e.target.value === '' ? '' : Number(e.target.value) }))}
+                onBlur={e => save('revenueEarned', e.target.value === '' ? 0 : Number(e.target.value))}
                 className="w-full font-mono text-sm border border-[#DFE1E6] rounded-md px-2.5 py-1.5 focus:outline-none focus:border-[#4C9AFF] text-[#172B4D]"
                 placeholder="0"
               />

@@ -81,6 +81,7 @@ export default function App() {
             getAllCards={getAllCards}
             openCard={openCard}
             addCard={addCard}
+            onUpdate={updateCard}
           />
         )}
         {view === 'budget' && (

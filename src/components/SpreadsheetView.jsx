@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
-import { Download, Plus, ArrowUpDown } from 'lucide-react'
-import { TACTIC_COLORS } from '../data/tacticCategories'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { Download, ArrowUpDown, ExternalLink } from 'lucide-react'
+import { TACTIC_COLORS, OWNERS, TACTIC_CATEGORIES } from '../data/tacticCategories'
 
 const STATUS_COLORS = {
   backlog: { bg: '#F4F5F7', text: '#5E6C84' },
@@ -11,27 +11,222 @@ const STATUS_COLORS = {
   complete: { bg: '#E3FCEF', text: '#006644' },
 }
 
-const STATUS_LABELS = {
-  backlog: 'Backlog',
-  'in-production': 'In Production',
-  scheduled: 'Scheduled',
-  'live-active': 'Live / Active',
-  'pending-review': 'Pending Review',
-  complete: 'Complete',
-}
+const STATUS_OPTIONS = [
+  { value: 'backlog', label: 'Backlog' },
+  { value: 'in-production', label: 'In Production' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'live-active', label: 'Live / Active' },
+  { value: 'pending-review', label: 'Pending Review' },
+  { value: 'complete', label: 'Complete' },
+]
 
-function fmt(n) {
-  if (!n && n !== 0) return '—'
-  return `$${Number(n).toLocaleString()}`
+function fmtMoney(n) {
+  const num = Number(n)
+  if (!num && num !== 0) return '—'
+  return `$${num.toLocaleString()}`
 }
 
 function fmtDate(d) {
   if (!d) return '—'
-  try { return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }
-  catch { return d }
+  try {
+    const parts = d.split('-')
+    const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+    return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  } catch { return d }
 }
 
-export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
+// Inline number editor — click the cell value to edit, Enter/blur to save
+function NumberCell({ value, onSave, className = '' }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef(null)
+
+  const start = (e) => {
+    e.stopPropagation()
+    setDraft(value ?? '')
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.select()
+  }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    const num = draft === '' ? 0 : Number(draft)
+    if (!isNaN(num)) onSave(num)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+        onClick={e => e.stopPropagation()}
+        className={`w-full font-mono text-sm border border-[#4C9AFF] rounded px-1.5 py-0.5 outline-none bg-blue-50 ${className}`}
+        style={{ minWidth: 70 }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={start}
+      title="Click to edit"
+      className={`cursor-text hover:bg-blue-50 hover:text-[#0747A6] rounded px-1 py-0.5 transition-colors font-mono text-sm ${className}`}
+    >
+      {fmtMoney(value)}
+    </span>
+  )
+}
+
+// Inline text editor
+function TextCell({ value, onSave, className = '' }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+  const inputRef = useRef(null)
+
+  const start = (e) => {
+    e.stopPropagation()
+    setDraft(value || '')
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.select()
+  }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    onSave(draft)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="text"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+        onClick={e => e.stopPropagation()}
+        className={`w-full text-sm border border-[#4C9AFF] rounded px-1.5 py-0.5 outline-none bg-blue-50 ${className}`}
+        style={{ minWidth: 120 }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={start}
+      title="Click to edit"
+      className={`cursor-text hover:bg-blue-50 hover:text-[#0747A6] rounded px-1 py-0.5 transition-colors text-sm ${className}`}
+    >
+      {value || <span className="text-[#B3BAC5] italic">—</span>}
+    </span>
+  )
+}
+
+// Inline date editor
+function DateCell({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const inputRef = useRef(null)
+
+  const start = (e) => {
+    e.stopPropagation()
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && inputRef.current) inputRef.current.showPicker?.()
+  }, [editing])
+
+  const commit = (e) => {
+    setEditing(false)
+    onSave(e.target.value)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="date"
+        defaultValue={value || ''}
+        onBlur={commit}
+        onChange={commit}
+        onKeyDown={e => { if (e.key === 'Escape') setEditing(false) }}
+        onClick={e => e.stopPropagation()}
+        className="text-xs font-mono border border-[#4C9AFF] rounded px-1.5 py-0.5 outline-none bg-blue-50"
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={start}
+      title="Click to edit"
+      className="cursor-text hover:bg-blue-50 hover:text-[#0747A6] rounded px-1 py-0.5 transition-colors font-mono text-xs"
+    >
+      {fmtDate(value)}
+    </span>
+  )
+}
+
+// Inline select editor
+function SelectCell({ value, options, onSave, renderValue }) {
+  const [editing, setEditing] = useState(false)
+  const selectRef = useRef(null)
+
+  const start = (e) => {
+    e.stopPropagation()
+    setEditing(true)
+  }
+
+  useEffect(() => {
+    if (editing && selectRef.current) selectRef.current.focus()
+  }, [editing])
+
+  const commit = (e) => {
+    setEditing(false)
+    onSave(e.target.value)
+  }
+
+  if (editing) {
+    return (
+      <select
+        ref={selectRef}
+        defaultValue={value || ''}
+        onBlur={commit}
+        onChange={commit}
+        onKeyDown={e => { if (e.key === 'Escape') setEditing(false) }}
+        onClick={e => e.stopPropagation()}
+        className="text-sm border border-[#4C9AFF] rounded px-1.5 py-0.5 outline-none bg-blue-50"
+      >
+        <option value="">—</option>
+        {options.map(o => (
+          <option key={o.value || o} value={o.value || o}>{o.label || o}</option>
+        ))}
+      </select>
+    )
+  }
+
+  return (
+    <span
+      onClick={start}
+      title="Click to edit"
+      className="cursor-text hover:bg-blue-50 hover:text-[#0747A6] rounded px-1 py-0.5 transition-colors text-sm"
+    >
+      {renderValue ? renderValue(value) : (value || <span className="text-[#B3BAC5] italic">—</span>)}
+    </span>
+  )
+}
+
+export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
   const [sortKey, setSortKey] = useState('launchDate')
   const [sortDir, setSortDir] = useState('asc')
 
@@ -46,6 +241,9 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
       } else if (['budget', 'annualBudget', 'spendToDate', 'revenueEarned'].includes(sortKey)) {
         av = Number(av) || 0
         bv = Number(bv) || 0
+      } else {
+        av = (av || '').toLowerCase()
+        bv = (bv || '').toLowerCase()
       }
       if (av < bv) return sortDir === 'asc' ? -1 : 1
       if (av > bv) return sortDir === 'asc' ? 1 : -1
@@ -61,12 +259,16 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
   }), [sorted])
 
   const blendedRoi = totals.annualBudget > 0 && totals.revenueEarned > 0
-    ? (totals.revenueEarned / totals.annualBudget).toFixed(1) + '×'
+    ? (totals.revenueEarned / totals.annualBudget).toFixed(2) + '×'
     : '—'
 
   const sort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc')
     else { setSortKey(key); setSortDir('asc') }
+  }
+
+  const update = (card, field, value) => {
+    onUpdate(card._tabKey, card._colKey, card.id, { [field]: value })
   }
 
   const exportCSV = () => {
@@ -75,7 +277,7 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
       c.name, c.campaignType, c.tactic, c.owner, c.launchDate,
       c.budget, c.annualBudget, c.spendToDate, c.revenueEarned,
       c.annualBudget > 0 && c.revenueEarned > 0 ? (c.revenueEarned / c.annualBudget).toFixed(2) : '',
-      STATUS_LABELS[c.status] || c.status,
+      (STATUS_OPTIONS.find(s => s.value === c.status) || {}).label || c.status,
       (c.specialty || []).join('; '),
     ])
     const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -104,7 +306,12 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
     <div className="flex-1 overflow-auto p-4">
       <div className="bg-white rounded-xl shadow-sm border border-[#DFE1E6] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[#DFE1E6]">
-          <h2 className="text-sm font-semibold text-[#172B4D]">All Campaigns <span className="text-[#5E6C84] font-normal">({sorted.length})</span></h2>
+          <div>
+            <h2 className="text-sm font-semibold text-[#172B4D]">
+              All Campaigns <span className="text-[#5E6C84] font-normal">({sorted.length})</span>
+            </h2>
+            <p className="text-xs text-[#5E6C84] mt-0.5">Click any cell to edit inline. Click <ExternalLink size={10} className="inline" /> to open full card.</p>
+          </div>
           <button
             onClick={exportCSV}
             className="flex items-center gap-1.5 text-sm text-[#5E6C84] hover:text-[#172B4D] border border-[#DFE1E6] px-3 py-1.5 rounded-md hover:bg-[#F4F5F7] transition-colors"
@@ -115,9 +322,10 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm border-collapse">
             <thead className="bg-[#F4F5F7] border-b border-[#DFE1E6]">
               <tr>
+                <th className="w-8 px-2 py-2.5" />
                 <Th label="Campaign" field="name" />
                 <Th label="Type" field="campaignType" />
                 <Th label="Tactic" field="tactic" />
@@ -129,58 +337,143 @@ export default function SpreadsheetView({ getAllCards, openCard, addCard }) {
                 <Th label="Revenue" field="revenueEarned" />
                 <th className="text-left text-xs font-semibold text-[#5E6C84] uppercase tracking-wider px-3 py-2.5 whitespace-nowrap">ROI</th>
                 <Th label="Status" field="status" />
-                <th className="text-left text-xs font-semibold text-[#5E6C84] uppercase tracking-wider px-3 py-2.5 whitespace-nowrap">Specialty</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F4F5F7]">
               {sorted.map(card => {
-                const roi = card.annualBudget > 0 && card.revenueEarned > 0
-                  ? (card.revenueEarned / card.annualBudget).toFixed(1) + '×'
+                const roi = Number(card.annualBudget) > 0 && Number(card.revenueEarned) > 0
+                  ? (Number(card.revenueEarned) / Number(card.annualBudget)).toFixed(2) + '×'
                   : '—'
                 const sc = STATUS_COLORS[card.status] || STATUS_COLORS.backlog
+
                 return (
-                  <tr
-                    key={card.id}
-                    onClick={() => openCard(card, card._tabKey, card._colKey)}
-                    className="hover:bg-[#F4F5F7] cursor-pointer transition-colors"
-                  >
-                    <td className="px-3 py-2.5 font-medium text-[#172B4D] max-w-[200px]">
-                      <div className="truncate">{card.name}</div>
+                  <tr key={card.id} className="hover:bg-[#FAFBFC] transition-colors group">
+
+                    {/* Open full card button */}
+                    <td className="px-2 py-2 text-center">
+                      <button
+                        onClick={() => openCard(card, card._tabKey, card._colKey)}
+                        title="Open full card"
+                        className="opacity-0 group-hover:opacity-100 text-[#5E6C84] hover:text-[#0747A6] transition-all"
+                      >
+                        <ExternalLink size={13} />
+                      </button>
                     </td>
-                    <td className="px-3 py-2.5 text-[#5E6C84] whitespace-nowrap">{card.campaignType}</td>
-                    <td className="px-3 py-2.5">
-                      {card.tactic && (
-                        <span className="text-xs px-1.5 py-0.5 rounded whitespace-nowrap" style={{ background: TACTIC_COLORS[card.tactic]?.bg || '#F4F5F7', color: TACTIC_COLORS[card.tactic]?.text || '#5E6C84' }}>
-                          {card.tactic.length > 20 ? card.tactic.slice(0, 18) + '…' : card.tactic}
-                        </span>
-                      )}
+
+                    {/* Campaign Name */}
+                    <td className="px-3 py-2 font-semibold text-[#172B4D] max-w-[200px]">
+                      <TextCell
+                        value={card.name}
+                        onSave={v => update(card, 'name', v)}
+                        className="font-semibold"
+                      />
                     </td>
-                    <td className="px-3 py-2.5 text-[#5E6C84] whitespace-nowrap">{card.owner || '—'}</td>
-                    <td className="px-3 py-2.5 text-[#5E6C84] whitespace-nowrap font-mono text-xs">{fmtDate(card.launchDate)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#172B4D] whitespace-nowrap">{fmt(card.budget)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#172B4D] whitespace-nowrap">{fmt(card.annualBudget)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#172B4D] whitespace-nowrap">{fmt(card.spendToDate)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#172B4D] whitespace-nowrap">{fmt(card.revenueEarned)}</td>
-                    <td className="px-3 py-2.5 font-mono text-[#172B4D] whitespace-nowrap">{roi}</td>
-                    <td className="px-3 py-2.5">
-                      <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: sc.bg, color: sc.text }}>
-                        {STATUS_LABELS[card.status] || card.status}
-                      </span>
+
+                    {/* Type — read-only (set by tab) */}
+                    <td className="px-3 py-2 text-[#5E6C84] whitespace-nowrap text-xs">{card.campaignType}</td>
+
+                    {/* Tactic */}
+                    <td className="px-3 py-2">
+                      <SelectCell
+                        value={card.tactic}
+                        options={TACTIC_CATEGORIES}
+                        onSave={v => update(card, 'tactic', v)}
+                        renderValue={v => v ? (
+                          <span className="text-xs px-1.5 py-0.5 rounded whitespace-nowrap" style={{ background: TACTIC_COLORS[v]?.bg || '#F4F5F7', color: TACTIC_COLORS[v]?.text || '#5E6C84' }}>
+                            {v.length > 22 ? v.slice(0, 20) + '…' : v}
+                          </span>
+                        ) : null}
+                      />
                     </td>
-                    <td className="px-3 py-2.5 text-[#5E6C84] text-xs">{(card.specialty || []).join(', ') || '—'}</td>
+
+                    {/* Owner */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <SelectCell
+                        value={card.owner}
+                        options={OWNERS}
+                        onSave={v => update(card, 'owner', v)}
+                      />
+                    </td>
+
+                    {/* Launch Date */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <DateCell
+                        value={card.launchDate}
+                        onSave={v => update(card, 'launchDate', v)}
+                      />
+                    </td>
+
+                    {/* Monthly Budget */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <NumberCell
+                        value={card.budget}
+                        onSave={v => update(card, 'budget', v)}
+                      />
+                    </td>
+
+                    {/* Annual Budget */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <NumberCell
+                        value={card.annualBudget}
+                        onSave={v => update(card, 'annualBudget', v)}
+                      />
+                    </td>
+
+                    {/* Spend to Date */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <NumberCell
+                        value={card.spendToDate}
+                        onSave={v => update(card, 'spendToDate', v)}
+                        className="text-[#FF5630]"
+                      />
+                    </td>
+
+                    {/* Revenue Earned */}
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <NumberCell
+                        value={card.revenueEarned}
+                        onSave={v => update(card, 'revenueEarned', v)}
+                        className="text-[#36B37E]"
+                      />
+                    </td>
+
+                    {/* ROI — computed, read-only */}
+                    <td className="px-3 py-2 font-mono text-[#172B4D] whitespace-nowrap font-semibold text-xs">
+                      {roi}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-3 py-2">
+                      <SelectCell
+                        value={card.status}
+                        options={STATUS_OPTIONS}
+                        onSave={v => update(card, 'status', v)}
+                        renderValue={v => {
+                          const c = STATUS_COLORS[v] || STATUS_COLORS.backlog
+                          const label = (STATUS_OPTIONS.find(s => s.value === v) || {}).label || v
+                          return (
+                            <span className="text-xs px-2 py-0.5 rounded-full whitespace-nowrap" style={{ background: c.bg, color: c.text }}>
+                              {label}
+                            </span>
+                          )
+                        }}
+                      />
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
             <tfoot className="bg-[#1A1A2E] text-white">
               <tr>
-                <td className="px-3 py-2.5 font-semibold" colSpan={5}>Totals ({sorted.length} campaigns)</td>
-                <td className="px-3 py-2.5 font-mono font-semibold">{fmt(totals.budget)}</td>
-                <td className="px-3 py-2.5 font-mono font-semibold">{fmt(totals.annualBudget)}</td>
-                <td className="px-3 py-2.5 font-mono font-semibold">{fmt(totals.spendToDate)}</td>
-                <td className="px-3 py-2.5 font-mono font-semibold">{fmt(totals.revenueEarned)}</td>
-                <td className="px-3 py-2.5 font-mono font-semibold">{blendedRoi}</td>
-                <td colSpan={2}></td>
+                <td colSpan={6} className="px-3 py-2.5 font-semibold text-sm">
+                  Totals — {sorted.length} campaigns
+                </td>
+                <td className="px-3 py-2.5 font-mono font-semibold">{fmtMoney(totals.budget)}</td>
+                <td className="px-3 py-2.5 font-mono font-semibold">{fmtMoney(totals.annualBudget)}</td>
+                <td className="px-3 py-2.5 font-mono font-semibold text-red-300">{fmtMoney(totals.spendToDate)}</td>
+                <td className="px-3 py-2.5 font-mono font-semibold text-green-300">{fmtMoney(totals.revenueEarned)}</td>
+                <td className="px-3 py-2.5 font-mono font-bold text-yellow-300">{blendedRoi}</td>
+                <td />
               </tr>
             </tfoot>
           </table>
