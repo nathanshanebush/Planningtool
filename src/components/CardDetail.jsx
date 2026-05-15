@@ -91,7 +91,7 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, 
   const [deleteConfirm, setDeleteConfirm] = useState(false)
   const [saved, setSaved] = useState(false)
   const [duplicated, setDuplicated] = useState(false)
-  const [openSections, setOpenSections] = useState({ tracking: false, performance: false, event: false, addetail: false, content: false, affiliate: false, links: false })
+  const [openSections, setOpenSections] = useState({ tracking: true, performance: true, event: true, addetail: true, content: true, affiliate: true, links: true })
   const panelRef = useRef(null)
 
   useEffect(() => { setLocal(card) }, [card.id])

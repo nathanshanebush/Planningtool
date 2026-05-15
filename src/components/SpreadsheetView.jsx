@@ -213,6 +213,7 @@ const COL_GROUPS = [
       { key: 'ctr', label: 'CTR (%)', sortable: true, width: 80 },
       { key: 'conversionRate', label: 'Conv. Rate %', width: 110 },
       { key: 'clicks', label: 'Clicks', width: 80 },
+      { key: 'optInLeads', label: 'Opt-In Leads', width: 110 },
     ],
   },
   {
@@ -223,6 +224,9 @@ const COL_GROUPS = [
       { key: 'going', label: 'Going', width: 80 },
       { key: 'estimatedParticipants', label: 'Est. Participants', width: 140 },
       { key: 'travelDate', label: 'Travel Date', width: 110 },
+      { key: 'adStartPreShow', label: 'Ad Start Pre-Show', width: 140 },
+      { key: 'adStartPostShow', label: 'Ad Start Post-Show', width: 150 },
+      { key: 'emailStartDate', label: 'Email Start Date', width: 130 },
       { key: 'contactName', label: 'Contact Name', width: 140 },
       { key: 'contactPhone', label: 'Contact Phone', width: 130 },
       { key: 'contactEmail', label: 'Contact Email', width: 160 },
@@ -276,11 +280,63 @@ const COL_GROUPS = [
 const ALL_COLS = COL_GROUPS.flatMap(g => g.cols)
 const SORTABLE_KEYS = ALL_COLS.filter(c => c.sortable).map(c => c.key)
 
+// ── Sticky Core column positions ──────────────────────────────────────────
+const CORE_COLS = COL_GROUPS[0].cols
+const CORE_KEYS = new Set(CORE_COLS.map(c => c.key))
+const STICKY_LEFT = {}
+let _left = 0
+CORE_COLS.forEach(col => {
+  STICKY_LEFT[col.key] = _left
+  _left += (col.width || 100)
+})
+const CORE_TOTAL_WIDTH = _left
+const TOTAL_TABLE_WIDTH = ALL_COLS.reduce((s, c) => s + (c.width || 100), 0)
+
+function stickyCell(key, extraStyle = {}) {
+  if (!CORE_KEYS.has(key)) return extraStyle
+  const isLast = key === 'status'
+  return {
+    position: 'sticky',
+    left: STICKY_LEFT[key],
+    zIndex: 2,
+    borderRight: isLast ? '2px solid #DFE1E6' : undefined,
+    ...extraStyle,
+  }
+}
+
 export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
   const [sortKey, setSortKey] = useState('launchDate')
   const [sortDir, setSortDir] = useState('asc')
+  const scrollRef = useRef(null)
+  const thumbRef = useRef(null)
+  const syncing = useRef(false)
 
   const allCards = useMemo(() => getAllCards(), [getAllCards])
+
+  // Sync bottom scrollbar ↔ table scroll
+  useEffect(() => {
+    const container = scrollRef.current
+    const thumb = thumbRef.current
+    if (!container || !thumb) return
+    const fromContainer = () => {
+      if (syncing.current) return
+      syncing.current = true
+      thumb.scrollLeft = container.scrollLeft
+      syncing.current = false
+    }
+    const fromThumb = () => {
+      if (syncing.current) return
+      syncing.current = true
+      container.scrollLeft = thumb.scrollLeft
+      syncing.current = false
+    }
+    container.addEventListener('scroll', fromContainer)
+    thumb.addEventListener('scroll', fromThumb)
+    return () => {
+      container.removeEventListener('scroll', fromContainer)
+      thumb.removeEventListener('scroll', fromThumb)
+    }
+  }, [])
 
   const sorted = useMemo(() => {
     return [...allCards].sort((a, b) => {
@@ -307,6 +363,7 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
     leadsGenerated: sorted.reduce((s, c) => s + (Number(c.leadsGenerated) || 0), 0),
     appointmentsSet: sorted.reduce((s, c) => s + (Number(c.appointmentsSet) || 0), 0),
     sales: sorted.reduce((s, c) => s + (Number(c.sales) || 0), 0),
+    optInLeads: sorted.reduce((s, c) => s + (Number(c.optInLeads) || 0), 0),
     commissionEarned: sorted.reduce((s, c) => s + (Number(c.commissionEarned) || 0), 0),
     revenueAttributed: sorted.reduce((s, c) => s + (Number(c.revenueAttributed) || 0), 0),
   }), [sorted])
@@ -362,6 +419,7 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
       case 'travelDate': return <DateCell value={card.travelDate} onSave={v => u('travelDate', v)} />
       case 'adStartPreShow': return <DateCell value={card.adStartPreShow} onSave={v => u('adStartPreShow', v)} />
       case 'adStartPostShow': return <DateCell value={card.adStartPostShow} onSave={v => u('adStartPostShow', v)} />
+      case 'emailStartDate': return <DateCell value={card.emailStartDate} onSave={v => u('emailStartDate', v)} />
       case 'publishedDate': return <DateCell value={card.publishedDate} onSave={v => u('publishedDate', v)} />
       case 'status': return (
         <SelectCell value={card.status} options={STATUS_OPTIONS} onSave={v => u('status', v)}
@@ -387,6 +445,7 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
       case 'ctr': return <NumberCell value={card.ctr} onSave={v => u('ctr', v)} fmt={fmtPct} />
       case 'conversionRate': return <NumberCell value={card.conversionRate} onSave={v => u('conversionRate', v)} fmt={fmtPct} />
       case 'clicks': return <NumberCell value={card.clicks} onSave={v => u('clicks', v)} fmt={fmtNum} />
+      case 'optInLeads': return <NumberCell value={card.optInLeads} onSave={v => u('optInLeads', v)} fmt={fmtNum} />
       case 'estimatedParticipants': return <NumberCell value={card.estimatedParticipants} onSave={v => u('estimatedParticipants', v)} fmt={fmtNum} />
       case 'revenueAttributed': return <NumberCell value={card.revenueAttributed} onSave={v => u('revenueAttributed', v)} />
       case 'commissionEarned': return <NumberCell value={card.commissionEarned} onSave={v => u('commissionEarned', v)} />
@@ -395,7 +454,6 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
           ? (Number(card.revenueEarned) / Number(card.annualBudget)).toFixed(2) + '×' : '—'
         return <span className="font-mono font-semibold text-xs text-[#172B4D]">{roi}</span>
       }
-      // Link fields
       case 'landingPageLink': return <LinkCell value={card.landingPageLink} onSave={v => u('landingPageLink', v)} />
       case 'thankYouPageLink': return <LinkCell value={card.thankYouPageLink} onSave={v => u('thankYouPageLink', v)} />
       case 'retargetingPageLink': return <LinkCell value={card.retargetingPageLink} onSave={v => u('retargetingPageLink', v)} />
@@ -405,7 +463,6 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
       case 'destinationURL': return <LinkCell value={card.destinationURL} onSave={v => u('destinationURL', v)} />
       case 'liveAdLink': return <LinkCell value={card.liveAdLink} onSave={v => u('liveAdLink', v)} />
       case 'formIntegrationLink': return <LinkCell value={card.formIntegrationLink} onSave={v => u('formIntegrationLink', v)} />
-      // Text fields (default)
       default: return <TextCell value={card[colKey]} onSave={v => u(colKey, v)} />
     }
   }
@@ -420,6 +477,7 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
       case 'leadsGenerated': return <span className="font-mono font-semibold">{fmtNum(totals.leadsGenerated)}</span>
       case 'appointmentsSet': return <span className="font-mono font-semibold">{fmtNum(totals.appointmentsSet)}</span>
       case 'sales': return <span className="font-mono font-semibold">{fmtNum(totals.sales)}</span>
+      case 'optInLeads': return <span className="font-mono font-semibold">{fmtNum(totals.optInLeads)}</span>
       case 'commissionEarned': return <span className="font-mono font-semibold">{fmtMoney(totals.commissionEarned)}</span>
       case 'revenueAttributed': return <span className="font-mono font-semibold">{fmtMoney(totals.revenueAttributed)}</span>
       default: return null
@@ -427,14 +485,15 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
   }
 
   return (
-    <div className="flex-1 overflow-auto p-4">
-      <div className="bg-white rounded-xl shadow-sm border border-[#DFE1E6] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#DFE1E6]">
+    <div className="flex-1 overflow-auto p-4 flex flex-col min-h-0">
+      <div className="bg-white rounded-xl shadow-sm border border-[#DFE1E6] overflow-hidden flex flex-col flex-1 min-h-0">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[#DFE1E6] flex-shrink-0">
           <div>
             <h2 className="text-sm font-semibold text-[#172B4D]">
               All Campaigns <span className="text-[#5E6C84] font-normal">({sorted.length})</span>
             </h2>
-            <p className="text-xs text-[#5E6C84] mt-0.5">Click any cell to edit. Scroll right for all fields. <ExternalLink size={10} className="inline" /> opens full card.</p>
+            <p className="text-xs text-[#5E6C84] mt-0.5">Click any cell to edit. Core columns stay fixed while scrolling right. <ExternalLink size={10} className="inline" /> opens full card.</p>
           </div>
           <button onClick={exportCSV}
             className="flex items-center gap-1.5 text-sm text-[#5E6C84] hover:text-[#172B4D] border border-[#DFE1E6] px-3 py-1.5 rounded-md hover:bg-[#F4F5F7] transition-colors">
@@ -442,25 +501,38 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="text-sm border-collapse" style={{ minWidth: 'max-content' }}>
-            <thead>
+        {/* Scrollable table */}
+        <div ref={scrollRef} className="overflow-x-auto flex-1 overflow-y-auto">
+          <table className="text-sm border-collapse" style={{ minWidth: TOTAL_TABLE_WIDTH }}>
+            <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
               {/* Group header row */}
               <tr>
-                {COL_GROUPS.map(g => (
-                  <th key={g.group.label} colSpan={g.cols.length}
-                    className="text-left text-xs font-bold px-3 py-1.5 whitespace-nowrap border-b border-white/20 border-r border-white/10"
-                    style={{ background: g.group.color, color: 'white' }}>
-                    {g.group.label}
-                  </th>
-                ))}
+                {COL_GROUPS.map((g, gi) => {
+                  const isCore = gi === 0
+                  return (
+                    <th key={g.group.label} colSpan={g.cols.length}
+                      className="text-left text-xs font-bold px-3 py-1.5 whitespace-nowrap border-b border-white/20"
+                      style={{
+                        background: g.group.color,
+                        color: 'white',
+                        ...(isCore ? { position: 'sticky', left: 0, zIndex: 4, borderRight: '2px solid rgba(255,255,255,0.3)' } : {}),
+                      }}>
+                      {g.group.label}
+                    </th>
+                  )
+                })}
               </tr>
               {/* Column headers */}
-              <tr className="bg-[#F4F5F7] border-b border-[#DFE1E6]">
+              <tr className="border-b border-[#DFE1E6]">
                 {ALL_COLS.map(col => (
                   <th key={col.key}
                     onClick={() => sort(col.key)}
-                    style={{ minWidth: col.width || 100, width: col.width || 100 }}
+                    style={{
+                      minWidth: col.width || 100,
+                      width: col.width || 100,
+                      background: '#F4F5F7',
+                      ...stickyCell(col.key, { zIndex: 3 }),
+                    }}
                     className={`text-left text-xs font-semibold text-[#5E6C84] uppercase tracking-wider px-3 py-2 whitespace-nowrap ${col.sortable ? 'cursor-pointer hover:text-[#172B4D] select-none' : ''}`}>
                     {col.key !== '_open' && (
                       <span className="flex items-center gap-1">
@@ -477,18 +549,26 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
                 <tr key={card.id} className="hover:bg-[#FAFBFC] transition-colors group">
                   {ALL_COLS.map(col => (
                     <td key={col.key}
-                      style={{ minWidth: col.width || 100, width: col.width || 100 }}
-                      className="px-3 py-2 align-middle">
+                      style={{
+                        minWidth: col.width || 100,
+                        width: col.width || 100,
+                        ...stickyCell(col.key, { background: 'white' }),
+                      }}
+                      className={`px-3 py-2 align-middle ${CORE_KEYS.has(col.key) ? 'group-hover:bg-[#FAFBFC]' : ''}`}>
                       {renderCell(card, col.key)}
                     </td>
                   ))}
                 </tr>
               ))}
             </tbody>
-            <tfoot>
+            <tfoot style={{ position: 'sticky', bottom: 0, zIndex: 10 }}>
               <tr className="bg-[#1A1A2E] text-white">
                 {ALL_COLS.map((col, i) => (
-                  <td key={col.key} className="px-3 py-2.5 text-xs whitespace-nowrap">
+                  <td key={col.key}
+                    className="px-3 py-2.5 text-xs whitespace-nowrap"
+                    style={{
+                      ...stickyCell(col.key, { background: '#1A1A2E' }),
+                    }}>
                     {i === 1
                       ? <span className="font-semibold">Totals — {sorted.length} campaigns</span>
                       : renderTotalsCell(col.key)}
@@ -497,6 +577,13 @@ export default function SpreadsheetView({ getAllCards, openCard, onUpdate }) {
               </tr>
             </tfoot>
           </table>
+        </div>
+
+        {/* Bottom scrollbar (always visible) */}
+        <div ref={thumbRef}
+          className="overflow-x-auto border-t border-[#DFE1E6] flex-shrink-0"
+          style={{ height: 14 }}>
+          <div style={{ width: TOTAL_TABLE_WIDTH, height: 1 }} />
         </div>
       </div>
     </div>
