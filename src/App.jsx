@@ -95,6 +95,11 @@ export default function App() {
           onUpdate={updateCard}
           onDelete={deleteCard}
           onMove={moveCard}
+          onDuplicate={(tabKey, cardData) => {
+            const { id, createdAt, status, _tabKey, _colKey, ...rest } = cardData
+            const newCard = addCard(tabKey, 'backlog', { ...rest, name: `${rest.name} (copy)` })
+            if (newCard) setTimeout(() => openCard(newCard, tabKey, 'backlog'), 100)
+          }}
         />
       )}
     </div>

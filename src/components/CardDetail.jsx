@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Trash2, Plus, ExternalLink, Check } from 'lucide-react'
+import { X, Trash2, Plus, ExternalLink, Check, Save, Copy } from 'lucide-react'
 import { OWNERS, SPECIALTIES, TACTIC_CATEGORIES, TRAFFIC_SOURCES, FUNNEL_STEPS } from '../data/tacticCategories'
 import { REPURPOSING_CHECKLIST } from '../data/seedData'
 import { format, parseISO } from 'date-fns'
@@ -13,11 +13,13 @@ const COLUMNS = [
   { id: 'complete', label: 'Complete' },
 ]
 
-export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove }) {
+export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove, onDuplicate }) {
   const [local, setLocal] = useState(card)
   const [newLink, setNewLink] = useState({ label: '', url: '' })
   const [newChecklistItem, setNewChecklistItem] = useState('')
   const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [duplicated, setDuplicated] = useState(false)
   const panelRef = useRef(null)
 
   useEffect(() => { setLocal(card) }, [card])
@@ -38,6 +40,20 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove }
     const updated = { ...local, ...updates }
     setLocal(updated)
     onUpdate(card._tabKey, card._colKey, card.id, updates)
+  }
+
+  const saveAll = () => {
+    onUpdate(card._tabKey, card._colKey, card.id, local)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const duplicateAsNew = () => {
+    if (onDuplicate) {
+      onDuplicate(card._tabKey, local)
+      setDuplicated(true)
+      setTimeout(() => setDuplicated(false), 2000)
+    }
   }
 
   const toggleSource = (src) => {
@@ -410,8 +426,37 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove }
           </div>
         </div>
 
-        {/* Footer: Delete */}
-        <div className="px-5 py-3 border-t border-[#DFE1E6] bg-[#F4F5F7]">
+        {/* Footer: Save + Duplicate + Delete */}
+        <div className="px-5 py-3 border-t border-[#DFE1E6] bg-[#F4F5F7] space-y-2">
+          {/* Save & Duplicate buttons */}
+          {!deleteConfirm && (
+            <div className="flex gap-2">
+              <button
+                onClick={saveAll}
+                className={`flex items-center justify-center gap-1.5 flex-1 text-sm font-medium px-3 py-2 rounded-md transition-colors ${
+                  saved
+                    ? 'bg-[#36B37E] text-white'
+                    : 'bg-[#1A1A2E] hover:bg-[#2d2d4e] text-white'
+                }`}
+              >
+                <Save size={14} />
+                {saved ? 'Saved!' : 'Save Updates'}
+              </button>
+              <button
+                onClick={duplicateAsNew}
+                className={`flex items-center justify-center gap-1.5 flex-1 text-sm font-medium px-3 py-2 rounded-md border transition-colors ${
+                  duplicated
+                    ? 'bg-[#36B37E] text-white border-[#36B37E]'
+                    : 'bg-white border-[#DFE1E6] text-[#172B4D] hover:bg-[#F4F5F7]'
+                }`}
+              >
+                <Copy size={14} />
+                {duplicated ? 'Copied!' : 'Duplicate as New'}
+              </button>
+            </div>
+          )}
+
+          {/* Delete */}
           {deleteConfirm ? (
             <div className="flex items-center gap-2">
               <span className="text-sm text-[#172B4D] flex-1">Delete this campaign?</span>
@@ -423,7 +468,7 @@ export default function CardDetail({ card, onClose, onUpdate, onDelete, onMove }
               </button>
             </div>
           ) : (
-            <button onClick={() => setDeleteConfirm(true)} className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-600 transition-colors">
+            <button onClick={() => setDeleteConfirm(true)} className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-600 transition-colors">
               <Trash2 size={14} />
               Delete Campaign
             </button>
