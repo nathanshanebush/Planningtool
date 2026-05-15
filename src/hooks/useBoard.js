@@ -91,6 +91,67 @@ export function useBoard() {
       links: cardData.links || [],
       status: colKey,
       createdAt: new Date().toISOString(),
+
+      // Tracking
+      campaignCode: '',
+      platform: '',
+      reviewer: '',
+      reviewStatus: '',
+      goLiveDate: '',
+
+      // Performance metrics
+      impressions: '',
+      cpc: '',
+      ctr: '',
+      leadsGenerated: '',
+      appointmentsSet: '',
+      sales: '',
+      conversionRate: '',
+      optInLeads: '',
+      clicks: '',
+
+      // Content / ad details
+      primaryCTA: '',
+      targetingNotes: '',
+      keywords: '',
+      performanceNotes: '',
+      writer: '',
+      publishedDate: '',
+
+      // Trade show specific
+      location: '',
+      boothNumber: '',
+      going: '',
+      estimatedParticipants: '',
+      travelDate: '',
+      adStartPreShow: '',
+      adStartPostShow: '',
+      emailStartDate: '',
+      socialStartDate: '',
+      contactName: '',
+      contactPhone: '',
+      contactEmail: '',
+
+      // Affiliate specific
+      affiliateCompany: '',
+      affiliateName: '',
+      affiliateEmail: '',
+      affiliateCode: '',
+      affiliateTier: '',
+      offerType: '',
+      revenueAttributed: '',
+      commissionEarned: '',
+
+      // Specific links
+      adCopyLink: '',
+      creativeAssetsLink: '',
+      utmTrackingLink: '',
+      destinationURL: '',
+      liveAdLink: '',
+      landingPageLink: '',
+      thankYouPageLink: '',
+      retargetingPageLink: '',
+      formIntegrationLink: '',
     }
     setBoardState(prev => {
       const newState = JSON.parse(JSON.stringify(prev))
