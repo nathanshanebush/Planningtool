@@ -4,11 +4,11 @@ import useAuthStore from '../../store/authStore'
 import { PageLoader } from '../shared/LoadingSpinner'
 
 export function ProtectedRoute({ children, requiredRole }) {
-  const { user, session, loading } = useAuthStore()
+  const { user, loading } = useAuthStore()
 
   if (loading) return <PageLoader />
 
-  if (!session && !user) {
+  if (!user) {
     return <Navigate to="/login" replace />
   }
 

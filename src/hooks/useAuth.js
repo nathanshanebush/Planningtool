@@ -7,6 +7,14 @@ export function useAuth() {
 
   useEffect(() => {
     if (!isSupabaseConfigured) {
+      setUser({
+        id: 'demo-user',
+        email: 'demo@impera.app',
+        first_name: 'Demo',
+        last_name: 'User',
+        role: 'super_admin',
+        status: 'active',
+      })
       setLoading(false)
       return
     }
