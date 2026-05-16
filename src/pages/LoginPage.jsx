@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { Button } from '../components/shared/Button'
+import { isSupabaseConfigured } from '../lib/supabase'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -77,10 +78,27 @@ export default function LoginPage() {
               Forgot password?
             </button>
           </div>
+
+          {!isSupabaseConfigured && (
+            <div className="mt-5 pt-5 border-t border-white/10 text-center">
+              <p className="text-xs text-white/30 mb-2">No auth configured — running in demo mode</p>
+              <Link
+                to="/"
+                className="text-sm font-medium text-orange hover:underline"
+              >
+                Enter as Demo Super Admin →
+              </Link>
+            </div>
+          )}
         </div>
 
         <p className="text-center text-xs text-white/30 mt-6">
           Impera · Campaign Command Center
+        </p>
+        <p className="text-center text-xs text-white/20 mt-1">
+          <Link to="/admin" className="hover:text-white/40 transition-colors">Admin Panel</Link>
+          {' · '}
+          <Link to="/" className="hover:text-white/40 transition-colors">Dashboard</Link>
         </p>
       </div>
     </div>

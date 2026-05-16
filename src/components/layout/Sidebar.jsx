@@ -5,7 +5,6 @@ import { RoleBadge } from '../shared/Badge'
 import { Avatar } from '../shared/Avatar'
 import useAuthStore from '../../store/authStore'
 import useUiStore from '../../store/uiStore'
-import { usePermissions } from '../../hooks/usePermissions'
 import { useAuth } from '../../hooks/useAuth'
 
 const NavItem = ({ to, icon: Icon, label, collapsed }) => (
@@ -33,7 +32,6 @@ const NavItem = ({ to, icon: Icon, label, collapsed }) => (
 export function Sidebar() {
   const { user } = useAuthStore()
   const { sidebarOpen, toggleSidebar } = useUiStore()
-  const { canAdmin } = usePermissions()
   const { logout } = useAuth()
   const navigate = useNavigate()
 
@@ -62,9 +60,7 @@ export function Sidebar() {
         <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
         <NavItem to="/campaigns" icon={Folder} label="Campaigns" collapsed={collapsed} />
         <NavItem to="/content" icon={TableProperties} label="Content" collapsed={collapsed} />
-        {canAdmin && (
-          <NavItem to="/admin" icon={Settings2} label="Admin" collapsed={collapsed} />
-        )}
+        <NavItem to="/admin" icon={Settings2} label="Admin" collapsed={collapsed} />
       </nav>
 
       <div className="p-3 border-t border-white/10">
