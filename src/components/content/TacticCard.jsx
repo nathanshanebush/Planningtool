@@ -1,6 +1,6 @@
 import React from 'react'
 import { format, isPast, parseISO } from 'date-fns'
-import { Paperclip, Calendar } from 'lucide-react'
+import { Paperclip, Calendar, AlertTriangle } from 'lucide-react'
 
 const PRIORITY_BORDERS = {
   Low: 'border-l-4 border-l-gray-500',
@@ -9,8 +9,15 @@ const PRIORITY_BORDERS = {
   Urgent: 'border-l-4 border-l-red-500',
 }
 
+// Tactic types that require a creative asset upload
+const CREATIVE_REQUIRED_TYPES = new Set([
+  'Ad Creative', 'Quote Graphic', 'LinkedIn Carousel',
+  'Podcast Thumbnail', 'Webinar Thumbnail',
+])
+
 export function TacticCard({ tactic, campaignName, onClick }) {
   const overdue = tactic.due_date && isPast(parseISO(tactic.due_date)) && !['Approved', 'Published'].includes(tactic.status)
+  const creativeNeeded = CREATIVE_REQUIRED_TYPES.has(tactic.tactic_type) && !tactic.has_creative
 
   return (
     <div
@@ -20,7 +27,14 @@ export function TacticCard({ tactic, campaignName, onClick }) {
         ${PRIORITY_BORDERS[tactic.priority] ?? ''}
       `}
     >
-      <p className="text-sm font-semibold text-white mb-1 line-clamp-2 leading-snug">{tactic.name}</p>
+      <div className="flex items-start justify-between gap-1 mb-1">
+        <p className="text-sm font-semibold text-white line-clamp-2 leading-snug flex-1">{tactic.name}</p>
+        {creativeNeeded && (
+          <div title="Creative asset needed" className="shrink-0 mt-0.5">
+            <AlertTriangle size={13} className="text-amber-400" />
+          </div>
+        )}
+      </div>
       {campaignName && (
         <p className="text-xs text-white/40 mb-2 truncate">{campaignName}</p>
       )}
@@ -40,10 +54,10 @@ export function TacticCard({ tactic, campaignName, onClick }) {
               <span>{format(parseISO(tactic.due_date), 'MMM d')}</span>
             </div>
           )}
-          <Paperclip size={12} className="text-white/20" />
+          {tactic.has_creative && <Paperclip size={12} className="text-white/40" />}
         </div>
         {tactic.assigned_to && (
-          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white">
+          <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
             {tactic.assigned_to[0]?.toUpperCase()}
           </div>
         )}
