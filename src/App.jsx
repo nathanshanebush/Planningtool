@@ -7,8 +7,10 @@ import Board from './components/Board'
 import CardDetail from './components/CardDetail'
 import SpreadsheetView from './components/SpreadsheetView'
 import BudgetBuilder from './components/BudgetBuilder'
+import CalendarView from './components/CalendarView'
 import { useBoard } from './hooks/useBoard'
 import { useBudget } from './hooks/useBudget'
+import { useCalendar } from './hooks/useCalendar'
 import { REPURPOSING_CHECKLIST } from './data/seedData'
 
 export default function App() {
@@ -33,6 +35,10 @@ export default function App() {
   } = useBoard()
 
   const { budgetStats } = useBudget(getAllCards)
+  const { tactics, addTactic, updateTactic, deleteTactic } = useCalendar()
+
+  const showTabNav = view !== 'budget' && view !== 'calendar'
+  const showFilterBar = view !== 'budget' && view !== 'calendar'
 
   const handleNewCampaign = useCallback(() => {
     const typeMap = {
@@ -56,11 +62,11 @@ export default function App() {
       <Header view={view} setView={setView} onNewCampaign={handleNewCampaign} />
       <BudgetDashboard budgetStats={budgetStats} />
 
-      {view !== 'budget' && (
+      {showTabNav && (
         <TabNav activeTab={activeTab} setActiveTab={setActiveTab} boardState={boardState} />
       )}
 
-      {view !== 'budget' && (
+      {showFilterBar && (
         <FilterBar filters={filters} setFilters={setFilters} onNewCampaign={handleNewCampaign} />
       )}
 
@@ -82,6 +88,17 @@ export default function App() {
             openCard={openCard}
             addCard={addCard}
             onUpdate={updateCard}
+          />
+        )}
+        {view === 'calendar' && (
+          <CalendarView
+            getAllCards={getAllCards}
+            openCard={openCard}
+            onUpdate={updateCard}
+            tactics={tactics}
+            onAddTactic={addTactic}
+            onUpdateTactic={updateTactic}
+            onDeleteTactic={deleteTactic}
           />
         )}
         {view === 'budget' && (
