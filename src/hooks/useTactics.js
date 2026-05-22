@@ -52,9 +52,11 @@ const MOCK_TACTICS = [
   },
 ]
 
+let mockTactics = MOCK_TACTICS.map((t) => ({ ...t }))
+
 async function fetchTactics(filters = {}) {
   if (!isSupabaseConfigured) {
-    let data = [...MOCK_TACTICS]
+    let data = [...mockTactics]
     if (filters.campaign_id) data = data.filter((t) => t.campaign_id === filters.campaign_id)
     if (filters.status) data = data.filter((t) => t.status === filters.status)
     if (filters.assigned_to) data = data.filter((t) => t.assigned_to === filters.assigned_to)
@@ -70,7 +72,7 @@ async function fetchTactics(filters = {}) {
 }
 
 async function fetchTactic(id) {
-  if (!isSupabaseConfigured) return MOCK_TACTICS.find((t) => t.id === id) ?? null
+  if (!isSupabaseConfigured) return mockTactics.find((t) => t.id === id) ?? null
   const { data, error } = await supabase.from('tactics').select('*').eq('id', id).single()
   if (error) throw error
   return data
@@ -88,7 +90,11 @@ export function useCreateTactic() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (data) => {
-      if (!isSupabaseConfigured) return { ...data, id: `t${Date.now()}` }
+      if (!isSupabaseConfigured) {
+        const newT = { ...data, id: `t${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
+        mockTactics = [...mockTactics, newT]
+        return newT
+      }
       const { data: result, error } = await supabase.from('tactics').insert(data).select().single()
       if (error) throw error
       return result
@@ -102,9 +108,9 @@ export function useUpdateTactic() {
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
       if (!isSupabaseConfigured) {
-        const idx = MOCK_TACTICS.findIndex(t => t.id === id)
-        if (idx !== -1) Object.assign(MOCK_TACTICS[idx], data)
-        return { id, ...MOCK_TACTICS[idx] }
+        const idx = mockTactics.findIndex(t => t.id === id)
+        if (idx !== -1) Object.assign(mockTactics[idx], data)
+        return { id, ...mockTactics[idx] }
       }
       const { data: result, error } = await supabase.from('tactics').update(data).eq('id', id).select().single()
       if (error) throw error
@@ -121,7 +127,10 @@ export function useDeleteTactic() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id) => {
-      if (!isSupabaseConfigured) return id
+      if (!isSupabaseConfigured) {
+        mockTactics = mockTactics.filter((t) => t.id !== id)
+        return id
+      }
       const { error } = await supabase.from('tactics').delete().eq('id', id)
       if (error) throw error
       return id
