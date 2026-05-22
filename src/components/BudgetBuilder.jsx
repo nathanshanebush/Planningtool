@@ -1,12 +1,21 @@
-import React, { useState, useMemo } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { ANNUAL_BUDGET_DATA, ANNUAL_BUDGET_TOTAL, FORECASTING_DEFAULTS } from '../data/annualBudget'
+import { useCampaigns, useUpdateCampaign } from '../hooks/useCampaigns'
+import { useBudgetPlan } from '../hooks/useBudgetPlan'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Category order matches ANNUAL_BUDGET_DATA order
+const CATEGORY_ORDER = ANNUAL_BUDGET_DATA.map(c => c.category)
 
 function fmt(n) {
   if (!n && n !== 0) return ''
   if (n === 0) return ''
+  return `$${Number(n).toLocaleString()}`
+}
+
+function fmtBudget(n) {
+  if (!n && n !== 0) return '$0'
   return `$${Number(n).toLocaleString()}`
 }
 
@@ -17,23 +26,130 @@ function fmtK(n) {
   return `$${Math.round(n).toLocaleString()}`
 }
 
+// Inline-editable numeric cell
+function MonthCell({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(value || ''))
+  const inputRef = useRef(null)
+
+  useEffect(() => { setDraft(String(value || '')) }, [value])
+  useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    const num = Number(draft) || 0
+    if (num !== (value || 0)) onSave(num)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') { setDraft(String(value || '')); setEditing(false) }
+        }}
+        className="w-full text-right font-mono text-xs bg-blue-50 border border-blue-400 rounded px-1 py-0.5 outline-none"
+        style={{ minWidth: 60 }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      className="block text-right font-mono cursor-pointer hover:bg-blue-50 rounded px-1 -mx-1 transition-colors"
+      title="Click to edit"
+    >
+      {value ? fmt(value) : <span className="text-[#DFE1E6]">—</span>}
+    </span>
+  )
+}
+
+// Inline-editable annual total cell
+function AnnualCell({ value, onSave }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(value || ''))
+  const inputRef = useRef(null)
+
+  useEffect(() => { setDraft(String(value || '')) }, [value])
+  useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    const num = Number(draft) || 0
+    if (num !== (value || 0)) onSave(num)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') { setDraft(String(value || '')); setEditing(false) }
+        }}
+        className="w-full text-right font-mono text-xs bg-blue-50 border border-blue-400 rounded px-1 py-0.5 outline-none font-bold"
+        style={{ minWidth: 70 }}
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      className="block text-right font-mono font-bold cursor-pointer hover:bg-blue-50 rounded px-1 -mx-1 transition-colors"
+      title="Click to edit annual total"
+    >
+      {fmtBudget(value)}
+    </span>
+  )
+}
+
 export default function BudgetBuilder() {
-  const [expanded, setExpanded] = useState({})
   const [forecasting, setForecasting] = useState(FORECASTING_DEFAULTS)
+  const { data: campaigns = [] } = useCampaigns()
+  const updateCampaign = useUpdateCampaign()
+  const { updateMonth, syncFromCampaign, getMonthly } = useBudgetPlan()
 
-  const toggle = (id) => setExpanded(p => ({ ...p, [id]: !p[id] }))
+  // Group campaigns by budget_category in the order of ANNUAL_BUDGET_DATA
+  const groupedCampaigns = useMemo(() => {
+    const groups = {}
+    campaigns.forEach(c => {
+      if (!groups[c.budget_category]) groups[c.budget_category] = []
+      groups[c.budget_category].push(c)
+    })
+    // Return in ANNUAL_BUDGET_DATA category order
+    return CATEGORY_ORDER
+      .filter(cat => groups[cat])
+      .map(cat => ({ category: cat, campaigns: groups[cat] }))
+  }, [campaigns])
 
-  const totalAnnualFromData = ANNUAL_BUDGET_DATA.reduce((s, cat) => s + cat.annualSubtotal, 0)
-
+  // Compute monthly totals across all campaigns (from campaign.budget distributed by monthly cells)
   const columnTotals = useMemo(() => {
     const totals = {}
     for (let m = 1; m <= 12; m++) {
-      totals[m] = ANNUAL_BUDGET_DATA.reduce((s, cat) =>
-        s + cat.lineItems.reduce((ls, item) => ls + (item.months[m] || 0), 0)
-      , 0)
+      totals[m] = campaigns.reduce((s, c) => {
+        const months = getMonthly(c.id)
+        return s + (Number(months[String(m)]) || 0)
+      }, 0)
     }
     return totals
-  }, [])
+  }, [campaigns, getMonthly])
+
+  const totalAnnual = useMemo(() =>
+    campaigns.reduce((s, c) => s + (Number(c.budget) || 0), 0)
+  , [campaigns])
+
+  const updateForecast = (key, value) => setForecasting(p => ({ ...p, [key]: Number(value) || 0 }))
 
   const forecastCalcs = useMemo(() => {
     const { revenueGoal, callsPerAgentPerDay, workingDaysPerMonth, decisionMakerRate, appointmentSetRate, showRate, presentationToSowRate, avgDealValue } = forecasting
@@ -51,8 +167,6 @@ export default function BudgetBuilder() {
     return { callsPerMonth, dmContactsPerAgent, appointmentsPerAgent, showsPerAgent, sowsPerAgent, revenuePerAgent, agentsNeeded, monthlyLeadsNeeded, monthlyApptsNeeded, monthlyPresentationsNeeded, monthlySowsNeeded }
   }, [forecasting])
 
-  const updateForecast = (key, value) => setForecasting(p => ({ ...p, [key]: Number(value) || 0 }))
-
   return (
     <div className="flex-1 overflow-auto p-4 space-y-6">
 
@@ -60,56 +174,96 @@ export default function BudgetBuilder() {
       <div className="bg-white rounded-xl shadow-sm border border-[#DFE1E6] overflow-hidden">
         <div className="px-4 py-3 border-b border-[#DFE1E6] bg-[#1A1A2E]">
           <h2 className="text-sm font-semibold text-white">2026 Annual Marketing Budget</h2>
-          <p className="text-xs text-white/50 mt-0.5">Total Planned: {fmtK(ANNUAL_BUDGET_TOTAL)} | Data Total: {fmtK(totalAnnualFromData)}</p>
+          <p className="text-xs text-white/50 mt-0.5">
+            Total Planned: {fmtK(ANNUAL_BUDGET_TOTAL)} | Campaign Total: {fmtK(totalAnnual)} — click any cell to edit
+          </p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full text-xs border-collapse">
             <thead className="bg-[#F4F5F7] border-b border-[#DFE1E6]">
               <tr>
-                <th className="text-left px-3 py-2 font-semibold text-[#5E6C84] sticky left-0 bg-[#F4F5F7] min-w-[200px]">Category / Line Item</th>
-                {MONTHS.map(m => <th key={m} className="text-right px-2 py-2 font-semibold text-[#5E6C84] min-w-[70px]">{m}</th>)}
-                <th className="text-right px-3 py-2 font-semibold text-[#5E6C84] min-w-[80px]">Annual</th>
+                <th className="text-left px-3 py-2 font-semibold text-[#5E6C84] sticky left-0 bg-[#F4F5F7] min-w-[220px] z-10">Campaign</th>
+                {MONTHS.map(m => (
+                  <th key={m} className="text-right px-2 py-2 font-semibold text-[#5E6C84] min-w-[75px]">{m}</th>
+                ))}
+                <th className="text-right px-3 py-2 font-semibold text-[#5E6C84] min-w-[90px]">Annual</th>
               </tr>
             </thead>
             <tbody>
-              {ANNUAL_BUDGET_DATA.map(cat => (
-                <React.Fragment key={cat.id}>
-                  <tr
-                    onClick={() => toggle(cat.id)}
-                    className="cursor-pointer hover:bg-[#F4F5F7] bg-[#F4F5F7]/50 border-b border-[#DFE1E6]"
-                  >
-                    <td className="px-3 py-2 font-semibold text-[#172B4D] sticky left-0 bg-[#F4F5F7]/90 flex items-center gap-1.5">
-                      {expanded[cat.id] ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                      {cat.category}
-                    </td>
-                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
-                      const total = cat.lineItems.reduce((s, i) => s + (i.months[m] || 0), 0)
-                      return <td key={m} className="px-2 py-2 text-right font-mono text-[#172B4D]">{fmt(total)}</td>
-                    })}
-                    <td className="px-3 py-2 text-right font-mono font-bold text-[#172B4D]">{fmtK(cat.annualSubtotal)}</td>
-                  </tr>
-                  {expanded[cat.id] && cat.lineItems.map((item, idx) => (
-                    <tr key={idx} className="border-b border-[#F4F5F7] hover:bg-blue-50/30">
-                      <td className="px-3 py-1.5 text-[#5E6C84] sticky left-0 bg-white pl-8">{item.name}</td>
+              {groupedCampaigns.map(({ category, campaigns: catCampaigns }) => {
+                // Category monthly sums (from monthly cells)
+                const catMonthTotals = {}
+                for (let m = 1; m <= 12; m++) {
+                  catMonthTotals[m] = catCampaigns.reduce((s, c) => {
+                    const months = getMonthly(c.id)
+                    return s + (Number(months[String(m)]) || 0)
+                  }, 0)
+                }
+                const catAnnual = catCampaigns.reduce((s, c) => s + (Number(c.budget) || 0), 0)
+
+                return (
+                  <React.Fragment key={category}>
+                    {/* Category header row */}
+                    <tr className="bg-[#1A1A2E] border-b border-[#0D0D1A]">
+                      <td className="px-3 py-2 font-semibold text-white sticky left-0 bg-[#1A1A2E] z-10 uppercase tracking-wide text-[10px]">
+                        {category}
+                      </td>
                       {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-                        <td key={m} className="px-2 py-1.5 text-right font-mono text-[#5E6C84]">
-                          {item.months[m] ? fmt(item.months[m]) : ''}
+                        <td key={m} className="px-2 py-2 text-right font-mono text-white/70 text-[11px]">
+                          {catMonthTotals[m] ? fmt(catMonthTotals[m]) : ''}
                         </td>
                       ))}
-                      <td className="px-3 py-1.5 text-right font-mono text-[#172B4D]">{fmtK(item.annual)}</td>
+                      <td className="px-3 py-2 text-right font-mono font-bold text-white text-[11px]">
+                        {fmtBudget(catAnnual)}
+                      </td>
                     </tr>
-                  ))}
-                </React.Fragment>
-              ))}
+
+                    {/* Campaign rows */}
+                    {catCampaigns.map(campaign => {
+                      const months = getMonthly(campaign.id)
+                      return (
+                        <tr key={campaign.id} className="border-b border-[#F4F5F7] hover:bg-blue-50/30 transition-colors">
+                          <td className="px-3 py-2 text-[#172B4D] sticky left-0 bg-white z-10 pl-5">
+                            <span className="font-medium">{campaign.name}</span>
+                          </td>
+                          {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
+                            <td key={m} className="px-2 py-1.5 text-right">
+                              <MonthCell
+                                value={Number(months[String(m)]) || 0}
+                                onSave={v => updateMonth(campaign.id, m, v)}
+                              />
+                            </td>
+                          ))}
+                          <td className="px-3 py-1.5 text-right">
+                            <AnnualCell
+                              value={Number(campaign.budget) || 0}
+                              onSave={v => {
+                                updateCampaign.mutate({ id: campaign.id, budget: v })
+                                syncFromCampaign(campaign.id, v)
+                              }}
+                            />
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </React.Fragment>
+                )
+              })}
             </tbody>
             <tfoot className="bg-[#1A1A2E] text-white">
               <tr>
-                <td className="px-3 py-2.5 font-bold sticky left-0 bg-[#1A1A2E]">TOTALS</td>
+                <td className="px-3 py-2.5 font-bold sticky left-0 bg-[#1A1A2E] z-10 uppercase tracking-wide text-[11px]">
+                  TOTALS
+                </td>
                 {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-                  <td key={m} className="px-2 py-2.5 text-right font-mono font-semibold">{fmt(columnTotals[m])}</td>
+                  <td key={m} className="px-2 py-2.5 text-right font-mono font-semibold text-[11px]">
+                    {columnTotals[m] ? fmt(columnTotals[m]) : ''}
+                  </td>
                 ))}
-                <td className="px-3 py-2.5 text-right font-mono font-bold">{fmtK(totalAnnualFromData)}</td>
+                <td className="px-3 py-2.5 text-right font-mono font-bold text-[11px]">
+                  {fmtBudget(totalAnnual)}
+                </td>
               </tr>
             </tfoot>
           </table>
