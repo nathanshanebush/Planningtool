@@ -33,6 +33,52 @@ function CellDropdown({ value, options, onChange, disabled }) {
   )
 }
 
+function BudgetCell({ value, onSave, disabled }) {
+  const [editing, setEditing] = React.useState(false)
+  const [draft, setDraft] = React.useState(String(value ?? ''))
+  const inputRef = React.useRef(null)
+
+  React.useEffect(() => { setDraft(String(value ?? '')) }, [value])
+  React.useEffect(() => { if (editing) inputRef.current?.focus() }, [editing])
+
+  const commit = () => {
+    setEditing(false)
+    const num = Number(draft) || 0
+    if (num !== (value ?? 0)) onSave(num)
+  }
+
+  if (disabled) {
+    return <span className="text-white/60">{value != null ? `$${Number(value).toLocaleString()}` : '—'}</span>
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') { setDraft(String(value ?? '')); setEditing(false) }
+        }}
+        className="bg-white/10 text-white rounded px-2 py-0.5 outline-none border border-orange/60 w-24 text-right"
+      />
+    )
+  }
+
+  return (
+    <span
+      onClick={() => setEditing(true)}
+      className="cursor-pointer hover:bg-white/5 rounded px-1 -mx-1 transition-colors"
+      title="Click to edit"
+    >
+      {value != null ? `$${Number(value).toLocaleString()}` : <span className="text-white/40 italic">—</span>}
+    </span>
+  )
+}
+
 export function SpreadView() {
   const { data: tactics, isLoading } = useTactics()
   const { data: campaigns } = useCampaigns()
@@ -197,6 +243,8 @@ export function SpreadView() {
                 <Th label="Due Date" field="due_date" />
                 <Th label="Status" field="status" />
                 <Th label="Priority" field="priority" />
+                <Th label="Budget" field="budget" />
+                <Th label="Spent" field="spend_to_date" />
                 <th className="px-3 py-3 text-xs font-medium text-white/50">Creative</th>
                 <th className="px-3 py-3 w-8" />
               </tr>
@@ -282,6 +330,12 @@ export function SpreadView() {
                       ) : (
                         <PriorityBadge priority={t.priority} />
                       )}
+                    </td>
+                    <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
+                      <BudgetCell value={t.budget} onSave={(v) => update(t.id, { budget: v })} disabled={!canEdit} />
+                    </td>
+                    <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
+                      <BudgetCell value={t.spend_to_date} onSave={(v) => update(t.id, { spend_to_date: v })} disabled={!canEdit} />
                     </td>
                     <td className="px-3 py-2.5 text-center">
                       <Paperclip size={14} className="text-white/30 mx-auto" />
