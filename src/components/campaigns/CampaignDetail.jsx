@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X, Pencil } from 'lucide-react'
+import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X, Pencil, Plus } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useCampaign, useUpdateCampaign } from '../../hooks/useCampaigns'
-import { useTactics } from '../../hooks/useTactics'
+import { useTactics, useCreateTactic } from '../../hooks/useTactics'
 import { KanbanView } from '../content/KanbanView'
 import { Button } from '../shared/Button'
+import { Modal } from '../shared/Modal'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
 import { EditCampaignModal } from './EditCampaignModal'
+import { MOCK_DROPDOWNS } from '../../hooks/useDropdowns'
 
 function fmt(n) {
   const num = Number(n) || 0
@@ -62,6 +64,7 @@ export function CampaignDetail() {
   const [tacticView, setTacticView] = useState('kanban')
 
   const save = (field, val) => updateCampaign.mutate({ id, [field]: val })
+  const [showEdit, setShowEdit] = useState(false)
 
   if (isLoading) return <div className="flex justify-center py-16"><LoadingSpinner size={32} /></div>
   if (!campaign) return <div className="text-white/50 text-center py-16">Campaign not found.</div>
@@ -87,13 +90,22 @@ export function CampaignDetail() {
               </div>
             )}
           </div>
-          <span
-            className={`text-sm px-3 py-1 rounded-full font-medium ${
-              campaign.status === 'active' ? 'bg-green-600/20 text-green-400' : 'bg-white/10 text-white/60'
-            }`}
-          >
-            {campaign.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-sm px-3 py-1 rounded-full font-medium ${
+                campaign.status === 'active' ? 'bg-green-600/20 text-green-400' : 'bg-white/10 text-white/60'
+              }`}
+            >
+              {campaign.status}
+            </span>
+            <button
+              onClick={() => setShowEdit(true)}
+              className="p-1.5 text-white/40 hover:text-white bg-white/5 hover:bg-white/10 rounded-md transition-colors"
+              title="Edit campaign"
+            >
+              <Pencil size={14} />
+            </button>
+          </div>
         </div>
         {campaign.description && (
           <p className="text-white/60 text-sm mb-4">{campaign.description}</p>
@@ -214,6 +226,12 @@ export function CampaignDetail() {
           )
         )}
       </div>
+
+      <EditCampaignModal
+        campaign={campaign}
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+      />
     </div>
   )
 }

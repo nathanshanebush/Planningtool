@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import {
   DndContext,
   closestCenter,
@@ -16,7 +16,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Layers, User, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
+import { Layers, User, ChevronDown, ChevronRight, Plus, X, SlidersHorizontal } from 'lucide-react'
 import { useTactics, useUpdateTactic, useCreateTactic } from '../../hooks/useTactics'
 import { useCampaigns } from '../../hooks/useCampaigns'
 import { TacticCard } from './TacticCard'
@@ -206,6 +206,91 @@ function GroupSection({ label, tactics, campaignId, campaignMap, campaigns, onCa
   )
 }
 
+const PRIORITY_COLORS = {
+  Low: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+  Medium: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/40',
+  High: 'bg-orange/20 text-orange border-orange/40',
+  Urgent: 'bg-red-500/20 text-red-400 border-red-500/40',
+}
+
+function FilterPopover({ filters, setFilters, onClose }) {
+  const popoverRef = useRef(null)
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        onClose()
+      }
+    }
+    // Delay to prevent immediate close from the trigger click
+    const timer = setTimeout(() => document.addEventListener('mousedown', handler), 50)
+    return () => { clearTimeout(timer); document.removeEventListener('mousedown', handler) }
+  }, [onClose])
+
+  const togglePriority = (p) => {
+    setFilters((f) => ({
+      ...f,
+      priorities: f.priorities.includes(p)
+        ? f.priorities.filter((x) => x !== p)
+        : [...f.priorities, p],
+    }))
+  }
+
+  return (
+    <div
+      ref={popoverRef}
+      className="absolute top-full left-0 mt-2 w-72 bg-coal border border-white/10 rounded-xl shadow-2xl z-30 p-4 space-y-4"
+    >
+      {/* Priority */}
+      <div>
+        <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">Priority</p>
+        <div className="flex flex-wrap gap-1.5">
+          {MOCK_DROPDOWNS['Priority'].map((p) => (
+            <button
+              key={p}
+              onClick={() => togglePriority(p)}
+              className={`text-xs px-2.5 py-1 rounded-full border transition-colors font-medium
+                ${filters.priorities.includes(p)
+                  ? (PRIORITY_COLORS[p] ?? 'bg-white/20 text-white border-white/20')
+                  : 'bg-white/5 text-white/50 border-white/10 hover:border-white/20 hover:text-white'
+                }`}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tactic Type */}
+      <div>
+        <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">Tactic Type</p>
+        <select
+          value={filters.tactic_type}
+          onChange={(e) => setFilters((f) => ({ ...f, tactic_type: e.target.value }))}
+          className="w-full bg-jet border border-white/10 text-white/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-orange/60"
+        >
+          <option value="">All types</option>
+          {MOCK_DROPDOWNS['Tactic Type'].map((t) => (
+            <option key={t} value={t}>{t}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Assigned To */}
+      <div>
+        <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">Assigned To</p>
+        <input
+          type="text"
+          value={filters.assigned_to}
+          onChange={(e) => setFilters((f) => ({ ...f, assigned_to: e.target.value }))}
+          placeholder="Filter by assignee…"
+          className="w-full bg-jet border border-white/10 text-white/80 text-xs rounded-lg px-3 py-2 outline-none focus:border-orange/60 placeholder-white/20"
+        />
+      </div>
+    </div>
+  )
+}
+
 export function KanbanView({ campaignId }) {
   const { data: tactics, isLoading } = useTactics(campaignId ? { campaign_id: campaignId } : undefined)
   const { data: campaigns } = useCampaigns()
@@ -214,6 +299,8 @@ export function KanbanView({ campaignId }) {
   const [panelTactic, setPanelTactic] = useState(null)
   const [activeId, setActiveId] = useState(null)
   const [groupBy, setGroupBy] = useState('none')
+  const [filters, setFilters] = useState({ priorities: [], tactic_type: '', assigned_to: '' })
+  const [showFilterPopover, setShowFilterPopover] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -226,17 +313,39 @@ export function KanbanView({ campaignId }) {
     return m
   }, [campaigns])
 
+  const filtered = useMemo(() => {
+    let t = tactics ?? []
+    if (filters.priorities.length) t = t.filter((x) => filters.priorities.includes(x.priority))
+    if (filters.tactic_type) t = t.filter((x) => x.tactic_type === filters.tactic_type)
+    if (filters.assigned_to) t = t.filter((x) => (x.assigned_to ?? '').toLowerCase().includes(filters.assigned_to.toLowerCase()))
+    return t
+  }, [tactics, filters])
+
+  const hasActiveFilters = filters.priorities.length > 0 || filters.tactic_type || filters.assigned_to
+
+  const clearFilters = () => setFilters({ priorities: [], tactic_type: '', assigned_to: '' })
+
+  const removeFilter = (type, value) => {
+    if (type === 'priority') {
+      setFilters((f) => ({ ...f, priorities: f.priorities.filter((p) => p !== value) }))
+    } else if (type === 'tactic_type') {
+      setFilters((f) => ({ ...f, tactic_type: '' }))
+    } else if (type === 'assigned_to') {
+      setFilters((f) => ({ ...f, assigned_to: '' }))
+    }
+  }
+
   const byStatus = useMemo(() => {
     const m = {}
     STATUS_COLUMNS.forEach((s) => { m[s] = [] })
-    ;(tactics ?? []).forEach((t) => { if (m[t.status]) m[t.status].push(t) })
+    filtered.forEach((t) => { if (m[t.status]) m[t.status].push(t) })
     return m
-  }, [tactics])
+  }, [filtered])
 
   const groups = useMemo(() => {
-    if (groupBy === 'none' || !tactics) return null
+    if (groupBy === 'none' || !filtered) return null
     const map = new Map()
-    tactics.forEach((t) => {
+    filtered.forEach((t) => {
       const key = groupBy === 'campaign'
         ? (campaignMap[t.campaign_id] ?? 'No Campaign')
         : (t.assigned_to ?? 'Unassigned')
@@ -244,7 +353,7 @@ export function KanbanView({ campaignId }) {
       map.get(key).push(t)
     })
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]))
-  }, [tactics, groupBy, campaignMap])
+  }, [filtered, groupBy, campaignMap])
 
   const draggedTactic = useMemo(() => (tactics ?? []).find((t) => t.id === activeId), [activeId, tactics])
 
@@ -274,7 +383,7 @@ export function KanbanView({ campaignId }) {
   return (
     <>
       {/* Toolbar */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <span className="text-white/40 text-xs font-medium uppercase tracking-wide">Group by</span>
         <div className="flex bg-jet border border-white/10 rounded-lg p-0.5 gap-0.5">
           {[
@@ -292,6 +401,68 @@ export function KanbanView({ campaignId }) {
             </button>
           ))}
         </div>
+
+        {/* Divider */}
+        <div className="w-px h-5 bg-white/10" />
+
+        {/* Filter button */}
+        <div className="relative">
+          <button
+            onClick={() => setShowFilterPopover((v) => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors
+              ${hasActiveFilters
+                ? 'bg-orange/10 text-orange border-orange/30 hover:bg-orange/20'
+                : 'bg-jet border-white/10 text-white/50 hover:text-white hover:border-white/20'
+              }`}
+          >
+            <SlidersHorizontal size={13} />
+            Filter
+            {hasActiveFilters && (
+              <span className="ml-0.5 bg-orange text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                {filters.priorities.length + (filters.tactic_type ? 1 : 0) + (filters.assigned_to ? 1 : 0)}
+              </span>
+            )}
+          </button>
+
+          {showFilterPopover && (
+            <FilterPopover
+              filters={filters}
+              setFilters={setFilters}
+              onClose={() => setShowFilterPopover(false)}
+            />
+          )}
+        </div>
+
+        {/* Active filter chips */}
+        {filters.priorities.map((p) => (
+          <span key={p} className="flex items-center gap-1 text-xs bg-white/10 text-white/70 pl-2 pr-1 py-0.5 rounded-full">
+            Priority: {p}
+            <button onClick={() => removeFilter('priority', p)} className="text-white/40 hover:text-white ml-0.5">
+              <X size={10} />
+            </button>
+          </span>
+        ))}
+        {filters.tactic_type && (
+          <span className="flex items-center gap-1 text-xs bg-white/10 text-white/70 pl-2 pr-1 py-0.5 rounded-full">
+            Type: {filters.tactic_type}
+            <button onClick={() => removeFilter('tactic_type')} className="text-white/40 hover:text-white ml-0.5">
+              <X size={10} />
+            </button>
+          </span>
+        )}
+        {filters.assigned_to && (
+          <span className="flex items-center gap-1 text-xs bg-white/10 text-white/70 pl-2 pr-1 py-0.5 rounded-full">
+            Assigned: {filters.assigned_to}
+            <button onClick={() => removeFilter('assigned_to')} className="text-white/40 hover:text-white ml-0.5">
+              <X size={10} />
+            </button>
+          </span>
+        )}
+        {hasActiveFilters && (
+          <button onClick={clearFilters} className="text-xs text-white/40 hover:text-orange transition-colors underline underline-offset-2">
+            Clear all
+          </button>
+        )}
       </div>
 
       <DndContext
@@ -328,7 +499,9 @@ export function KanbanView({ campaignId }) {
               />
             ))}
             {(!groups || groups.length === 0) && (
-              <div className="text-center py-16 text-white/30">No tactics found.</div>
+              <div className="text-center py-16 text-white/30">
+                {hasActiveFilters ? 'No tactics match your filters.' : 'No tactics found.'}
+              </div>
             )}
           </div>
         )}

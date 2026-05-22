@@ -4,8 +4,9 @@ import { DropdownField } from '../shared/DropdownField'
 import { StatusBadge, PriorityBadge } from '../shared/Badge'
 import { CreativeUpload } from './CreativeUpload'
 import { usePermissions } from '../../hooks/usePermissions'
-import { useUpdateTactic } from '../../hooks/useTactics'
+import { useUpdateTactic, useDeleteTactic } from '../../hooks/useTactics'
 import { MOCK_DROPDOWNS } from '../../hooks/useDropdowns'
+import { Button } from '../shared/Button'
 import { MessageSquare, Info, Image, Clock, Send } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 
@@ -172,10 +173,22 @@ function HistoryTab({ canEdit }) {
 
 export function TacticDetailPanel({ tactic, open, onClose }) {
   const [tab, setTab] = useState('details')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const { canEdit, canComment } = usePermissions()
   const updateTactic = useUpdateTactic()
+  const deleteTactic = useDeleteTactic()
 
   const handleUpdate = (data) => updateTactic.mutate(data)
+
+  const handleDelete = async () => {
+    if (!confirmDelete) {
+      setConfirmDelete(true)
+      return
+    }
+    await deleteTactic.mutateAsync(tactic.id)
+    setConfirmDelete(false)
+    onClose()
+  }
 
   return (
     <SidePanel open={open} onClose={onClose} title={tactic?.name ?? 'Tactic Detail'}>
@@ -195,10 +208,30 @@ export function TacticDetailPanel({ tactic, open, onClose }) {
             ))}
           </div>
 
-          {tab === 'details' && <DetailsTab tactic={tactic} canEdit={canEdit} onUpdate={handleUpdate} />}
-          {tab === 'creative' && <CreativeUpload tacticId={tactic.id} />}
-          {tab === 'comments' && <CommentsTab canComment={canComment} />}
-          {tab === 'history' && <HistoryTab canEdit={canEdit} />}
+          <div className="flex-1 overflow-y-auto">
+            {tab === 'details' && <DetailsTab tactic={tactic} canEdit={canEdit} onUpdate={handleUpdate} />}
+            {tab === 'creative' && <CreativeUpload tacticId={tactic.id} />}
+            {tab === 'comments' && <CommentsTab canComment={canComment} />}
+            {tab === 'history' && <HistoryTab canEdit={canEdit} />}
+          </div>
+
+          {canEdit && (
+            <div className="border-t border-white/10 px-6 py-4 shrink-0">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleteTactic.isPending}
+                className="w-full justify-center"
+              >
+                {deleteTactic.isPending
+                  ? 'Deleting…'
+                  : confirmDelete
+                    ? 'Click again to confirm'
+                    : 'Delete Tactic'}
+              </Button>
+            </div>
+          )}
         </>
       )}
     </SidePanel>
