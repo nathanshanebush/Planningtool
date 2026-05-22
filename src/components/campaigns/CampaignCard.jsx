@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
-import { Calendar, ArrowRight, Edit2, Check, X } from 'lucide-react'
+import { Calendar, ArrowRight, Edit2, Check, X, Pencil } from 'lucide-react'
 import { useTactics } from '../../hooks/useTactics'
 import { useUpdateCampaign } from '../../hooks/useCampaigns'
+import { EditCampaignModal } from './EditCampaignModal'
 
 const statusColors = {
   active: 'bg-green-600/20 text-green-400 border border-green-600/30',
@@ -70,6 +71,7 @@ export function CampaignCard({ campaign }) {
   const navigate = useNavigate()
   const { data: tactics } = useTactics({ campaign_id: campaign.id })
   const updateCampaign = useUpdateCampaign()
+  const [showEdit, setShowEdit] = useState(false)
 
   const total = tactics?.length ?? 0
   const done = (tactics ?? []).filter((t) => ['Approved', 'Published'].includes(t.status)).length
@@ -89,7 +91,16 @@ export function CampaignCard({ campaign }) {
     >
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="text-base font-semibold text-white group-hover:text-white/90 leading-tight">{campaign.name}</h3>
-        <ArrowRight size={16} className="text-white/30 group-hover:text-orange transition-colors shrink-0 mt-0.5" />
+        <div className="flex items-center gap-1 shrink-0 mt-0.5">
+          <button
+            onClick={(e) => { e.stopPropagation(); setShowEdit(true) }}
+            className="p-1 text-white/30 hover:text-white rounded transition-colors"
+            title="Edit campaign"
+          >
+            <Pencil size={13} />
+          </button>
+          <ArrowRight size={16} className="text-white/30 group-hover:text-orange transition-colors" />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -162,6 +173,12 @@ export function CampaignCard({ campaign }) {
           </span>
         </div>
       )}
+
+      <EditCampaignModal
+        campaign={campaign}
+        open={showEdit}
+        onClose={() => setShowEdit(false)}
+      />
     </div>
   )
 }

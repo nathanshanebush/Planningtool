@@ -1,12 +1,13 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X } from 'lucide-react'
+import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X, Pencil } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useCampaign, useUpdateCampaign } from '../../hooks/useCampaigns'
 import { useTactics } from '../../hooks/useTactics'
 import { KanbanView } from '../content/KanbanView'
 import { Button } from '../shared/Button'
 import { LoadingSpinner } from '../shared/LoadingSpinner'
+import { EditCampaignModal } from './EditCampaignModal'
 
 function fmt(n) {
   const num = Number(n) || 0

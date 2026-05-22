@@ -158,6 +158,22 @@ export function useCreateCampaign() {
   })
 }
 
+export function useDeleteCampaign() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id) => {
+      if (!isSupabaseConfigured) {
+        mockCampaigns = mockCampaigns.filter(c => c.id !== id)
+        return id
+      }
+      const { error } = await supabase.from('campaigns').delete().eq('id', id)
+      if (error) throw error
+      return id
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['campaigns'] }),
+  })
+}
+
 export function useUpdateCampaign() {
   const qc = useQueryClient()
   return useMutation({
