@@ -51,3 +51,65 @@ export function useDropdownOptions(name) {
     data: query.data?.[name] ?? [],
   }
 }
+
+export function useUpdateDropdownOption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ categoryName, oldLabel, newLabel }) => {
+      if (!isSupabaseConfigured) {
+        if (MOCK_DROPDOWNS[categoryName]) {
+          const idx = MOCK_DROPDOWNS[categoryName].indexOf(oldLabel)
+          if (idx >= 0) MOCK_DROPDOWNS[categoryName][idx] = newLabel
+        }
+        return { categoryName, oldLabel, newLabel }
+      }
+      const { data: reg } = await supabase.from('dropdown_registry').select('id').eq('name', categoryName).single()
+      if (!reg) throw new Error('Category not found')
+      const { error } = await supabase.from('dropdown_options').update({ label: newLabel }).eq('registry_id', reg.id).eq('label', oldLabel)
+      if (error) throw error
+      return { categoryName, oldLabel, newLabel }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dropdowns'] }),
+  })
+}
+
+export function useAddDropdownOption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ categoryName, label }) => {
+      if (!isSupabaseConfigured) {
+        if (MOCK_DROPDOWNS[categoryName] && !MOCK_DROPDOWNS[categoryName].includes(label)) {
+          MOCK_DROPDOWNS[categoryName] = [...MOCK_DROPDOWNS[categoryName], label]
+        }
+        return { categoryName, label }
+      }
+      const { data: reg } = await supabase.from('dropdown_registry').select('id').eq('name', categoryName).single()
+      if (!reg) throw new Error('Category not found')
+      const maxOrder = MOCK_DROPDOWNS[categoryName]?.length ?? 99
+      const { error } = await supabase.from('dropdown_options').insert({ registry_id: reg.id, label, display_order: maxOrder, is_active: true })
+      if (error) throw error
+      return { categoryName, label }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dropdowns'] }),
+  })
+}
+
+export function useDeleteDropdownOption() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ categoryName, label }) => {
+      if (!isSupabaseConfigured) {
+        if (MOCK_DROPDOWNS[categoryName]) {
+          MOCK_DROPDOWNS[categoryName] = MOCK_DROPDOWNS[categoryName].filter((o) => o !== label)
+        }
+        return { categoryName, label }
+      }
+      const { data: reg } = await supabase.from('dropdown_registry').select('id').eq('name', categoryName).single()
+      if (!reg) throw new Error('Category not found')
+      const { error } = await supabase.from('dropdown_options').update({ is_active: false }).eq('registry_id', reg.id).eq('label', label)
+      if (error) throw error
+      return { categoryName, label }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['dropdowns'] }),
+  })
+}

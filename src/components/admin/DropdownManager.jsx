@@ -1,7 +1,12 @@
 import React, { useState } from 'react'
 import { ChevronDown, ChevronRight, GripVertical, Plus, Trash2, Edit2, Check, X } from 'lucide-react'
 import { Button } from '../shared/Button'
-import { MOCK_DROPDOWNS } from '../../hooks/useDropdowns'
+import {
+  useDropdowns,
+  useAddDropdownOption,
+  useUpdateDropdownOption,
+  useDeleteDropdownOption,
+} from '../../hooks/useDropdowns'
 
 function OptionRow({ option, onDelete, onEdit }) {
   const [editing, setEditing] = useState(false)
@@ -42,19 +47,34 @@ function OptionRow({ option, onDelete, onEdit }) {
   )
 }
 
-function DropdownSection({ name, options: initOptions }) {
+function DropdownSection({ name, options: initOptions, categoryName }) {
   const [expanded, setExpanded] = useState(false)
   const [options, setOptions] = useState(initOptions)
   const [newLabel, setNewLabel] = useState('')
 
+  const addMutation = useAddDropdownOption()
+  const updateMutation = useUpdateDropdownOption()
+  const deleteMutation = useDeleteDropdownOption()
+
   const addOption = () => {
-    if (!newLabel.trim()) return
-    setOptions((prev) => [...prev, newLabel.trim()])
+    const trimmed = newLabel.trim()
+    if (!trimmed) return
+    setOptions((prev) => [...prev, trimmed])
     setNewLabel('')
+    addMutation.mutate({ categoryName, label: trimmed })
   }
 
-  const deleteOption = (idx) => setOptions((prev) => prev.filter((_, i) => i !== idx))
-  const editOption = (idx, val) => setOptions((prev) => prev.map((o, i) => i === idx ? val : o))
+  const deleteOption = (idx) => {
+    const label = options[idx]
+    setOptions((prev) => prev.filter((_, i) => i !== idx))
+    deleteMutation.mutate({ categoryName, label })
+  }
+
+  const editOption = (idx, val) => {
+    const oldLabel = options[idx]
+    setOptions((prev) => prev.map((o, i) => i === idx ? val : o))
+    updateMutation.mutate({ categoryName, oldLabel, newLabel: val })
+  }
 
   return (
     <div className="border border-white/10 rounded-xl overflow-hidden">
@@ -98,6 +118,20 @@ function DropdownSection({ name, options: initOptions }) {
 }
 
 export function DropdownManager() {
+  const { data: dropdowns, isLoading } = useDropdowns()
+
+  if (isLoading) {
+    return (
+      <div>
+        <div className="mb-4">
+          <h3 className="text-sm font-semibold text-white">Dropdown Manager</h3>
+          <p className="text-xs text-white/50 mt-1">Manage all dropdown options used across the platform.</p>
+        </div>
+        <p className="text-sm text-white/40">Loading…</p>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className="mb-4">
@@ -105,8 +139,8 @@ export function DropdownManager() {
         <p className="text-xs text-white/50 mt-1">Manage all dropdown options used across the platform.</p>
       </div>
       <div className="space-y-3">
-        {Object.entries(MOCK_DROPDOWNS).map(([name, options]) => (
-          <DropdownSection key={name} name={name} options={options} />
+        {Object.entries(dropdowns ?? {}).map(([name, options]) => (
+          <DropdownSection key={name} name={name} options={options} categoryName={name} />
         ))}
       </div>
     </div>

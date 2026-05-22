@@ -10,6 +10,7 @@ import CampaignDetailPage from './pages/CampaignDetailPage'
 import ContentPage from './pages/ContentPage'
 import AdminPage from './pages/AdminPage'
 import BudgetPage from './pages/BudgetPage'
+import CalendarPage from './pages/CalendarPage'
 import { useAuth } from './hooks/useAuth'
 
 const queryClient = new QueryClient({
@@ -46,6 +47,7 @@ export default function App() {
               <Route path="campaigns/:id" element={<CampaignDetailPage />} />
               <Route path="content" element={<ContentPage />} />
               <Route path="budget" element={<BudgetPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
               <Route path="admin" element={<AdminPage />} />
               <Route path="admin/dropdowns" element={<AdminPage />} />
               <Route path="admin/users" element={<AdminPage />} />

@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { format, parseISO, isPast } from 'date-fns'
-import { ArrowUpDown, ChevronRight, Paperclip, Plus, Filter, X } from 'lucide-react'
+import { ArrowUpDown, ChevronRight, Paperclip, Plus, Filter, X, Download, SlidersHorizontal } from 'lucide-react'
 import { useTactics, useUpdateTactic, useCreateTactic } from '../../hooks/useTactics'
 import { useCampaigns } from '../../hooks/useCampaigns'
 import { StatusBadge, PriorityBadge } from '../shared/Badge'
@@ -93,6 +93,12 @@ export function SpreadView() {
   const [filters, setFilters] = useState({ campaign_id: '', status: '', tactic_type: '', assigned_to: '' })
   const [showFilters, setShowFilters] = useState(false)
   const [bulkStatus, setBulkStatus] = useState('')
+  const [colVisible, setColVisible] = useState({
+    campaign: true, type: true, platform: true, traffic: true,
+    funnel: true, pillar: true, budget: true, spent: true, creative: true,
+  })
+  const [showColMenu, setShowColMenu] = useState(false)
+  const colMenuRef = useRef(null)
 
   const campaignMap = useMemo(() => {
     const m = {}
@@ -141,6 +147,44 @@ export function SpreadView() {
     })
   }
 
+  const exportCSV = () => {
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const headers = ['Name', 'Campaign', 'Type', 'Platform', 'Traffic Source', 'Funnel Step', 'Content Pillar', 'Due Date', 'Status', 'Priority', 'Budget', 'Spent', 'Assigned To']
+    const rows = filtered.map((t) => [
+      q(t.name),
+      q(campaignMap[t.campaign_id] ?? ''),
+      q(t.tactic_type),
+      q(t.platform),
+      q(t.traffic_source),
+      q(t.funnel_step),
+      q(t.content_pillar),
+      q(t.due_date),
+      q(t.status),
+      q(t.priority),
+      q(t.budget),
+      q(t.spend_to_date),
+      q(t.assigned_to),
+    ].join(','))
+    const csvString = [headers.map(q).join(','), ...rows].join('\n')
+    const url = URL.createObjectURL(new Blob([csvString], { type: 'text/csv' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `tactics-export-${format(new Date(), 'yyyy-MM-dd')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  useEffect(() => {
+    if (!showColMenu) return
+    const handler = (e) => {
+      if (colMenuRef.current && !colMenuRef.current.contains(e.target)) {
+        setShowColMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showColMenu])
+
   const Th = ({ label, field, className = '' }) => (
     <th
       onClick={field ? () => toggleSort(field) : undefined}
@@ -159,7 +203,7 @@ export function SpreadView() {
   return (
     <div className="flex flex-col h-full">
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
         <Button variant="ghost" size="sm" onClick={() => setShowFilters(!showFilters)}>
           <Filter size={14} /> Filters
           {Object.values(filters).some(Boolean) && <span className="w-2 h-2 rounded-full bg-orange" />}
@@ -198,6 +242,42 @@ export function SpreadView() {
             )}
           </div>
         )}
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={exportCSV} title="Export CSV">
+            <Download size={14} /> Export CSV
+          </Button>
+          <div className="relative" ref={colMenuRef}>
+            <Button variant="ghost" size="sm" onClick={() => setShowColMenu((v) => !v)} title="Toggle columns">
+              <SlidersHorizontal size={14} />
+            </Button>
+            {showColMenu && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-coal border border-white/10 rounded-lg shadow-xl p-3 min-w-[160px]">
+                <p className="text-white/40 text-xs font-medium mb-2 uppercase tracking-wide">Columns</p>
+                {[
+                  { key: 'campaign', label: 'Campaign' },
+                  { key: 'type', label: 'Type' },
+                  { key: 'platform', label: 'Platform' },
+                  { key: 'traffic', label: 'Traffic' },
+                  { key: 'funnel', label: 'Funnel' },
+                  { key: 'pillar', label: 'Pillar' },
+                  { key: 'budget', label: 'Budget' },
+                  { key: 'spent', label: 'Spent' },
+                  { key: 'creative', label: 'Creative' },
+                ].map(({ key, label }) => (
+                  <label key={key} className="flex items-center gap-2 py-1 cursor-pointer hover:text-white text-white/70 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={colVisible[key]}
+                      onChange={() => setColVisible((prev) => ({ ...prev, [key]: !prev[key] }))}
+                      className="accent-orange"
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Bulk Actions */}
@@ -234,18 +314,18 @@ export function SpreadView() {
                   />
                 </th>
                 <Th label="Tactic Name" field="name" className="min-w-[180px]" />
-                <Th label="Campaign" field="campaign_id" className="min-w-[140px]" />
-                <Th label="Type" field="tactic_type" />
-                <Th label="Platform" field="platform" />
-                <Th label="Traffic" field="traffic_source" />
-                <Th label="Funnel" field="funnel_step" />
-                <Th label="Pillar" field="content_pillar" />
+                {colVisible.campaign && <Th label="Campaign" field="campaign_id" className="min-w-[140px]" />}
+                {colVisible.type && <Th label="Type" field="tactic_type" />}
+                {colVisible.platform && <Th label="Platform" field="platform" />}
+                {colVisible.traffic && <Th label="Traffic" field="traffic_source" />}
+                {colVisible.funnel && <Th label="Funnel" field="funnel_step" />}
+                {colVisible.pillar && <Th label="Pillar" field="content_pillar" />}
                 <Th label="Due Date" field="due_date" />
                 <Th label="Status" field="status" />
                 <Th label="Priority" field="priority" />
-                <Th label="Budget" field="budget" />
-                <Th label="Spent" field="spend_to_date" />
-                <th className="px-3 py-3 text-xs font-medium text-white/50">Creative</th>
+                {colVisible.budget && <Th label="Budget" field="budget" />}
+                {colVisible.spent && <Th label="Spent" field="spend_to_date" />}
+                {colVisible.creative && <th className="px-3 py-3 text-xs font-medium text-white/50">Creative</th>}
                 <th className="px-3 py-3 w-8" />
               </tr>
             </thead>
@@ -267,32 +347,44 @@ export function SpreadView() {
                     <td className="px-3 py-2.5 font-medium text-white min-w-[180px]">
                       <InlineEdit value={t.name} onSave={(v) => update(t.id, { name: v })} disabled={!canEdit} />
                     </td>
-                    <td className="px-3 py-2.5 text-white/60">
-                      <CellDropdown
-                        value={campaignMap[t.campaign_id]}
-                        options={campaigns?.map((c) => c.name) ?? []}
-                        onChange={(v) => {
-                          const c = campaigns?.find((c) => c.name === v)
-                          if (c) update(t.id, { campaign_id: c.id })
-                        }}
-                        disabled={!canEdit}
-                      />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CellDropdown value={t.tactic_type} options={MOCK_DROPDOWNS['Tactic Type']} onChange={(v) => update(t.id, { tactic_type: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CellDropdown value={t.platform} options={MOCK_DROPDOWNS['Platform']} onChange={(v) => update(t.id, { platform: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CellDropdown value={t.traffic_source} options={MOCK_DROPDOWNS['Traffic Source']} onChange={(v) => update(t.id, { traffic_source: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CellDropdown value={t.funnel_step} options={MOCK_DROPDOWNS['Funnel Step']} onChange={(v) => update(t.id, { funnel_step: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5">
-                      <CellDropdown value={t.content_pillar} options={MOCK_DROPDOWNS['Content Pillar']} onChange={(v) => update(t.id, { content_pillar: v })} disabled={!canEdit} />
-                    </td>
+                    {colVisible.campaign && (
+                      <td className="px-3 py-2.5 text-white/60">
+                        <CellDropdown
+                          value={campaignMap[t.campaign_id]}
+                          options={campaigns?.map((c) => c.name) ?? []}
+                          onChange={(v) => {
+                            const c = campaigns?.find((c) => c.name === v)
+                            if (c) update(t.id, { campaign_id: c.id })
+                          }}
+                          disabled={!canEdit}
+                        />
+                      </td>
+                    )}
+                    {colVisible.type && (
+                      <td className="px-3 py-2.5">
+                        <CellDropdown value={t.tactic_type} options={MOCK_DROPDOWNS['Tactic Type']} onChange={(v) => update(t.id, { tactic_type: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.platform && (
+                      <td className="px-3 py-2.5">
+                        <CellDropdown value={t.platform} options={MOCK_DROPDOWNS['Platform']} onChange={(v) => update(t.id, { platform: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.traffic && (
+                      <td className="px-3 py-2.5">
+                        <CellDropdown value={t.traffic_source} options={MOCK_DROPDOWNS['Traffic Source']} onChange={(v) => update(t.id, { traffic_source: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.funnel && (
+                      <td className="px-3 py-2.5">
+                        <CellDropdown value={t.funnel_step} options={MOCK_DROPDOWNS['Funnel Step']} onChange={(v) => update(t.id, { funnel_step: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.pillar && (
+                      <td className="px-3 py-2.5">
+                        <CellDropdown value={t.content_pillar} options={MOCK_DROPDOWNS['Content Pillar']} onChange={(v) => update(t.id, { content_pillar: v })} disabled={!canEdit} />
+                      </td>
+                    )}
                     <td className={`px-3 py-2.5 text-sm whitespace-nowrap ${overdue ? 'text-red-400' : 'text-white/60'}`}>
                       {canEdit ? (
                         <input
@@ -331,15 +423,21 @@ export function SpreadView() {
                         <PriorityBadge priority={t.priority} />
                       )}
                     </td>
-                    <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
-                      <BudgetCell value={t.budget} onSave={(v) => update(t.id, { budget: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
-                      <BudgetCell value={t.spend_to_date} onSave={(v) => update(t.id, { spend_to_date: v })} disabled={!canEdit} />
-                    </td>
-                    <td className="px-3 py-2.5 text-center">
-                      <Paperclip size={14} className="text-white/30 mx-auto" />
-                    </td>
+                    {colVisible.budget && (
+                      <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
+                        <BudgetCell value={t.budget} onSave={(v) => update(t.id, { budget: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.spent && (
+                      <td className="px-3 py-2.5 text-white/70 font-mono text-sm whitespace-nowrap">
+                        <BudgetCell value={t.spend_to_date} onSave={(v) => update(t.id, { spend_to_date: v })} disabled={!canEdit} />
+                      </td>
+                    )}
+                    {colVisible.creative && (
+                      <td className="px-3 py-2.5 text-center">
+                        <Paperclip size={14} className="text-white/30 mx-auto" />
+                      </td>
+                    )}
                     <td className="px-3 py-2.5">
                       <button
                         onClick={() => setActiveTactic(t)}
