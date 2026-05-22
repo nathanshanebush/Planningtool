@@ -7,6 +7,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  useDroppable,
 } from '@dnd-kit/core'
 import {
   SortableContext,
@@ -15,8 +16,8 @@ import {
   useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Layers, User, ChevronDown, ChevronRight } from 'lucide-react'
-import { useTactics, useUpdateTactic } from '../../hooks/useTactics'
+import { Layers, User, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
+import { useTactics, useUpdateTactic, useCreateTactic } from '../../hooks/useTactics'
 import { useCampaigns } from '../../hooks/useCampaigns'
 import { TacticCard } from './TacticCard'
 import { TacticDetailPanel } from './TacticDetailPanel'
@@ -35,14 +36,23 @@ const COLUMN_STYLES = {
   'On Hold': 'border-t-red-500',
 }
 
+// Makes the column body a drop target so empty columns accept cards
+function DroppableBody({ status, children, className }) {
+  const id = `col::${status}`
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${className} transition-colors ${isOver ? 'bg-white/5 ring-1 ring-inset ring-orange/40' : ''}`}
+    >
+      {children}
+    </div>
+  )
+}
+
 function SortableCard({ tactic, campaignName, onClick }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: tactic.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  }
-
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
       <TacticCard tactic={tactic} campaignName={campaignName} onClick={onClick} />
@@ -50,8 +60,118 @@ function SortableCard({ tactic, campaignName, onClick }) {
   )
 }
 
-function GroupSection({ label, tactics, campaignMap, byStatus, onCardClick, canEdit, updateTactic, setActiveId }) {
+// Inline quick-add form at bottom of each column
+function QuickAdd({ status, defaultCampaignId, campaigns, onAdded }) {
+  const [open, setOpen] = useState(false)
+  const [name, setName] = useState('')
+  const [campaignId, setCampaignId] = useState(defaultCampaignId ?? '')
+  const createTactic = useCreateTactic()
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    await createTactic.mutateAsync({
+      name: name.trim(),
+      status,
+      campaign_id: campaignId || null,
+      priority: 'Medium',
+    })
+    setName('')
+    setOpen(false)
+    if (onAdded) onAdded()
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-1.5 px-3 py-2 text-xs text-white/30 hover:text-white/60 hover:bg-white/5 rounded-lg transition-colors mt-1"
+      >
+        <Plus size={12} /> Add card
+      </button>
+    )
+  }
+
+  return (
+    <form onSubmit={submit} className="mt-1 bg-coal border border-white/10 rounded-lg p-2 space-y-2">
+      <input
+        autoFocus
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="Card title…"
+        className="w-full bg-jet border border-white/10 text-white text-xs rounded px-2.5 py-1.5 outline-none focus:border-orange/60 placeholder-white/20"
+      />
+      {!defaultCampaignId && campaigns?.length > 0 && (
+        <select
+          value={campaignId}
+          onChange={(e) => setCampaignId(e.target.value)}
+          className="w-full bg-jet border border-white/10 text-white/70 text-xs rounded px-2 py-1.5 outline-none focus:border-orange/60"
+        >
+          <option value="">No campaign</option>
+          {campaigns.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      )}
+      <div className="flex gap-1.5">
+        <button
+          type="submit"
+          disabled={!name.trim() || createTactic.isPending}
+          className="flex-1 bg-orange text-white text-xs rounded px-2 py-1.5 font-medium hover:bg-orange/90 disabled:opacity-40 transition-colors"
+        >
+          {createTactic.isPending ? '…' : 'Add'}
+        </button>
+        <button
+          type="button"
+          onClick={() => { setOpen(false); setName('') }}
+          className="px-2 py-1.5 text-white/40 hover:text-white transition-colors"
+        >
+          <X size={12} />
+        </button>
+      </div>
+    </form>
+  )
+}
+
+// A single status column used in both flat and grouped views
+function Column({ status, items, campaignName, campaigns, defaultCampaignId, onCardClick, compact = false }) {
+  const w = compact ? 'w-56' : 'w-64'
+  return (
+    <div className={`flex flex-col ${w} shrink-0 bg-jet rounded-xl border-t-2 ${COLUMN_STYLES[status] ?? ''} border border-white/10`}>
+      <div className={`flex items-center justify-between ${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b border-white/10`}>
+        <h3 className={`${compact ? 'text-xs' : 'text-sm'} font-semibold text-white`}>{status}</h3>
+        <span className="text-xs bg-white/10 text-white/60 px-1.5 py-0.5 rounded-full">{items.length}</span>
+      </div>
+      <DroppableBody status={status} className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[80px]">
+        <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+          {items.map((t) => (
+            <SortableCard
+              key={t.id}
+              tactic={t}
+              campaignName={campaignName ?? undefined}
+              onClick={() => onCardClick(t)}
+            />
+          ))}
+        </SortableContext>
+        {items.length === 0 && (
+          <div className="text-center py-4 text-white/20 text-xs select-none">Drop here</div>
+        )}
+        <QuickAdd
+          status={status}
+          defaultCampaignId={defaultCampaignId}
+          campaigns={campaigns}
+          onAdded={() => {}}
+        />
+      </DroppableBody>
+    </div>
+  )
+}
+
+function GroupSection({ label, tactics, campaignId, campaignMap, campaigns, onCardClick }) {
   const [collapsed, setCollapsed] = useState(false)
+  // Derive defaultCampaignId from the group label (if grouped by campaign)
+  const defaultCampaignId = campaignId ??
+    Object.entries(campaignMap).find(([, name]) => name === label)?.[0] ?? null
 
   return (
     <div className="mb-6">
@@ -65,34 +185,19 @@ function GroupSection({ label, tactics, campaignMap, byStatus, onCardClick, canE
       </button>
 
       {!collapsed && (
-        <div className="flex gap-4 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {STATUS_COLUMNS.map((status) => {
             const items = tactics.filter((t) => t.status === status)
             return (
-              <div
+              <Column
                 key={status}
-                className={`flex flex-col w-56 shrink-0 bg-jet rounded-xl border-t-2 ${COLUMN_STYLES[status] ?? ''} border border-white/10`}
-              >
-                <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-                  <h3 className="text-xs font-semibold text-white">{status}</h3>
-                  <span className="text-xs bg-white/10 text-white/60 px-1.5 py-0.5 rounded-full">{items.length}</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-2 min-h-[80px]">
-                  <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                    {items.map((t) => (
-                      <SortableCard
-                        key={t.id}
-                        tactic={t}
-                        campaignName={campaignMap[t.campaign_id]}
-                        onClick={() => onCardClick(t)}
-                      />
-                    ))}
-                  </SortableContext>
-                  {items.length === 0 && (
-                    <div className="text-center py-4 text-white/20 text-xs">Empty</div>
-                  )}
-                </div>
-              </div>
+                status={status}
+                items={items}
+                campaigns={campaigns}
+                defaultCampaignId={defaultCampaignId}
+                onCardClick={onCardClick}
+                compact
+              />
             )
           })}
         </div>
@@ -108,7 +213,7 @@ export function KanbanView({ campaignId }) {
   const { canEdit } = usePermissions()
   const [panelTactic, setPanelTactic] = useState(null)
   const [activeId, setActiveId] = useState(null)
-  const [groupBy, setGroupBy] = useState('none') // 'none' | 'campaign' | 'assigned_to'
+  const [groupBy, setGroupBy] = useState('none')
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -124,10 +229,7 @@ export function KanbanView({ campaignId }) {
   const byStatus = useMemo(() => {
     const m = {}
     STATUS_COLUMNS.forEach((s) => { m[s] = [] })
-    ;(tactics ?? []).forEach((t) => {
-      const col = m[t.status]
-      if (col) col.push(t)
-    })
+    ;(tactics ?? []).forEach((t) => { if (m[t.status]) m[t.status].push(t) })
     return m
   }, [tactics])
 
@@ -151,10 +253,18 @@ export function KanbanView({ campaignId }) {
   const handleDragEnd = ({ active, over }) => {
     setActiveId(null)
     if (!over || active.id === over.id || !canEdit) return
-    const newStatus = STATUS_COLUMNS.find(
-      (col) => byStatus[col]?.some((t) => t.id === over.id) || over.id === col
-    )
-    if (newStatus) {
+
+    // over.id can be a tactic id, or a droppable column id like "col::In Progress"
+    let newStatus = null
+    if (typeof over.id === 'string' && over.id.startsWith('col::')) {
+      newStatus = over.id.replace('col::', '')
+    } else {
+      newStatus = STATUS_COLUMNS.find((col) =>
+        byStatus[col]?.some((t) => t.id === over.id)
+      )
+    }
+
+    if (newStatus && newStatus !== (tactics ?? []).find((t) => t.id === active.id)?.status) {
       updateTactic.mutate({ id: active.id, status: newStatus })
     }
   }
@@ -191,54 +301,30 @@ export function KanbanView({ campaignId }) {
         onDragEnd={handleDragEnd}
       >
         {groupBy === 'none' ? (
-          /* Default: flat status columns */
           <div className="flex gap-4 overflow-x-auto pb-4 h-[calc(100vh-280px)]">
-            {STATUS_COLUMNS.map((status) => {
-              const items = byStatus[status] ?? []
-              return (
-                <div
-                  key={status}
-                  className={`flex flex-col w-64 shrink-0 bg-jet rounded-xl border-t-2 ${COLUMN_STYLES[status] ?? ''} border border-white/10`}
-                >
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                    <h3 className="text-sm font-semibold text-white">{status}</h3>
-                    <span className="text-xs bg-white/10 text-white/60 px-2 py-0.5 rounded-full font-medium">
-                      {items.length}
-                    </span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                    <SortableContext items={items.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-                      {items.map((t) => (
-                        <SortableCard
-                          key={t.id}
-                          tactic={t}
-                          campaignName={groupBy === 'none' && !campaignId ? campaignMap[t.campaign_id] : undefined}
-                          onClick={() => setPanelTactic(t)}
-                        />
-                      ))}
-                    </SortableContext>
-                    {items.length === 0 && (
-                      <div className="text-center py-6 text-white/20 text-xs">No items</div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+            {STATUS_COLUMNS.map((status) => (
+              <Column
+                key={status}
+                status={status}
+                items={byStatus[status] ?? []}
+                campaigns={campaigns}
+                defaultCampaignId={campaignId}
+                onCardClick={setPanelTactic}
+                campaignName={null}
+              />
+            ))}
           </div>
         ) : (
-          /* Grouped: accordion sections per group, each with status sub-columns */
           <div className="overflow-y-auto h-[calc(100vh-280px)] pr-1">
             {(groups ?? []).map(([label, groupTactics]) => (
               <GroupSection
                 key={label}
                 label={label}
                 tactics={groupTactics}
+                campaignId={campaignId}
                 campaignMap={campaignMap}
-                byStatus={byStatus}
+                campaigns={campaigns}
                 onCardClick={setPanelTactic}
-                canEdit={canEdit}
-                updateTactic={updateTactic}
-                setActiveId={setActiveId}
               />
             ))}
             {(!groups || groups.length === 0) && (
@@ -247,13 +333,15 @@ export function KanbanView({ campaignId }) {
           </div>
         )}
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {draggedTactic && (
-            <TacticCard
-              tactic={draggedTactic}
-              campaignName={campaignMap[draggedTactic.campaign_id]}
-              onClick={() => {}}
-            />
+            <div className="rotate-1 opacity-90">
+              <TacticCard
+                tactic={draggedTactic}
+                campaignName={campaignMap[draggedTactic.campaign_id]}
+                onClick={() => {}}
+              />
+            </div>
           )}
         </DragOverlay>
       </DndContext>
