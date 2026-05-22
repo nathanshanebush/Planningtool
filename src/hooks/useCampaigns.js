@@ -1,54 +1,133 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
-const MOCK_CAMPAIGNS = [
+export const MOCK_CAMPAIGNS = [
+  // Tradeshows / Events — $76,390
   {
-    id: '1',
-    name: 'Q3 Podcast Launch',
-    campaign_type: 'Podcast/Webinar',
-    description: 'Launch campaign for the new marketing podcast series.',
-    start_date: '2026-07-01',
-    end_date: '2026-09-30',
-    status: 'active',
-    created_by: 'user1',
-    created_at: '2026-05-01T00:00:00Z',
-    updated_at: '2026-05-10T00:00:00Z',
+    id: '1', name: 'SOMSA Post-Conference Follow-Up', campaign_type: 'Trade Show',
+    description: 'Follow-up sequences and materials for the SOMSA conference.',
+    start_date: '2026-05-01', end_date: '2026-06-15', status: 'active',
+    budget: 3040, spend_to_date: 3040,
+    budget_category: 'Tradeshows / Events',
+    created_by: 'user1', created_at: '2026-04-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z',
   },
   {
-    id: '2',
-    name: 'Summer Paid Ads Blitz',
-    campaign_type: 'Paid Ads',
-    description: 'Multi-platform paid advertising campaign targeting new leads.',
-    start_date: '2026-06-01',
-    end_date: '2026-08-31',
-    status: 'active',
-    created_by: 'user1',
-    created_at: '2026-04-15T00:00:00Z',
-    updated_at: '2026-05-12T00:00:00Z',
+    id: '2', name: 'MGMA Annual Conference', campaign_type: 'Trade Show',
+    description: 'Booth, materials, and post-show outreach for MGMA.',
+    start_date: '2026-09-01', end_date: '2026-10-15', status: 'planning',
+    budget: 5000, spend_to_date: 0,
+    budget_category: 'Tradeshows / Events',
+    created_by: 'user1', created_at: '2026-04-10T00:00:00Z', updated_at: '2026-04-10T00:00:00Z',
   },
   {
-    id: '3',
-    name: 'Trade Show Chicago',
-    campaign_type: 'Trade Show',
-    description: 'Marketing materials and follow-up sequences for Chicago trade show.',
-    start_date: '2026-08-10',
-    end_date: '2026-08-15',
-    status: 'planning',
-    created_by: 'user1',
-    created_at: '2026-05-05T00:00:00Z',
-    updated_at: '2026-05-05T00:00:00Z',
+    id: '3', name: 'AAO Ophthalmology Conference', campaign_type: 'Trade Show',
+    description: 'Two-month booth + sponsorship at AAO 2026.',
+    start_date: '2026-09-15', end_date: '2026-10-31', status: 'planning',
+    budget: 10000, spend_to_date: 0,
+    budget_category: 'Tradeshows / Events',
+    created_by: 'user1', created_at: '2026-04-12T00:00:00Z', updated_at: '2026-04-12T00:00:00Z',
+  },
+  {
+    id: '4', name: 'PPS Trade Show', campaign_type: 'Trade Show',
+    description: 'Q4 PPS booth and pre/post-show digital campaign.',
+    start_date: '2026-10-01', end_date: '2026-12-31', status: 'planning',
+    budget: 15000, spend_to_date: 0,
+    budget_category: 'Tradeshows / Events',
+    created_by: 'user1', created_at: '2026-04-15T00:00:00Z', updated_at: '2026-04-15T00:00:00Z',
+  },
+  {
+    id: '5', name: 'HINT Summit & Remaining Trade Shows', campaign_type: 'Trade Show',
+    description: 'HINT Summit, Glaucoma 360, Beltone, DPC, IHS, FYZICAL, NSCHBC events.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 43350, spend_to_date: 11850,
+    budget_category: 'Tradeshows / Events',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z',
+  },
+  // Digital & Online Marketing — $32,450
+  {
+    id: '6', name: 'Summer Paid Ads Blitz', campaign_type: 'Paid Ads',
+    description: 'Multi-platform paid advertising — Facebook retargeting, LinkedIn, Google Ads.',
+    start_date: '2026-06-01', end_date: '2026-08-31', status: 'active',
+    budget: 14920, spend_to_date: 4960,
+    budget_category: 'Digital & Online Marketing',
+    created_by: 'user1', created_at: '2026-04-15T00:00:00Z', updated_at: '2026-05-12T00:00:00Z',
+  },
+  {
+    id: '7', name: 'SEO & Website Content', campaign_type: 'Blog',
+    description: 'Ongoing SEO blog posts, website copy, and GHL landing pages.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 17530, spend_to_date: 7304,
+    budget_category: 'Digital & Online Marketing',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-10T00:00:00Z',
+  },
+  // Broadcast Media — $16,480
+  {
+    id: '8', name: 'Q3 Podcast Launch', campaign_type: 'Podcast/Webinar',
+    description: 'Full podcast launch — scripts, thumbnails, promotions, Buzzsprout distribution.',
+    start_date: '2026-07-01', end_date: '2026-09-30', status: 'active',
+    budget: 16480, spend_to_date: 0,
+    budget_category: 'Broadcast Media',
+    created_by: 'user1', created_at: '2026-05-01T00:00:00Z', updated_at: '2026-05-10T00:00:00Z',
+  },
+  // Outreach & Direct Sales — $97,534
+  {
+    id: '9', name: 'Direct Outreach & Sales Enablement', campaign_type: 'Email/SMS',
+    description: 'GHL email sequences, SMS campaigns, outreach scripts, and sales collateral.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 97534, spend_to_date: 40639,
+    budget_category: 'Outreach & Direct Sales',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-15T00:00:00Z',
+  },
+  // Affiliate Referrals — $5,520
+  {
+    id: '10', name: 'Affiliate & Referral Program', campaign_type: 'Organic Social',
+    description: 'Partner referral communications, co-marketing materials.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 5520, spend_to_date: 2300,
+    budget_category: 'Affiliate Referrals',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z',
+  },
+  // Print Media / Direct Mail — $8,250
+  {
+    id: '11', name: 'PPS Buyers Guide & Print Media', campaign_type: 'Trade Show',
+    description: 'PPS Buyers Guide placements and direct mail drops.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 8250, spend_to_date: 875,
+    budget_category: 'Print Media / Direct Mail',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-15T00:00:00Z',
+  },
+  // Corporate & Brand Initiatives — $20,875
+  {
+    id: '12', name: 'Brand & Corporate Initiatives', campaign_type: 'Blog',
+    description: 'Corporate identity, brand content, LinkedIn company presence, thought leadership.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 20875, spend_to_date: 8698,
+    budget_category: 'Corporate & Brand Initiatives',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-10T00:00:00Z',
+  },
+  // Admin — $11,988
+  {
+    id: '13', name: 'Marketing Ops & Admin', campaign_type: 'Email/SMS',
+    description: 'GHL, email platform costs, StreamYard, and miscellaneous marketing ops.',
+    start_date: '2026-01-01', end_date: '2026-12-31', status: 'active',
+    budget: 11988, spend_to_date: 5995,
+    budget_category: 'Admin',
+    created_by: 'user1', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z',
   },
 ]
 
+// In-memory store for mock optimistic updates
+let mockCampaigns = MOCK_CAMPAIGNS.map((c) => ({ ...c }))
+
 async function fetchCampaigns() {
-  if (!isSupabaseConfigured) return MOCK_CAMPAIGNS
+  if (!isSupabaseConfigured) return mockCampaigns
   const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return data
 }
 
 async function fetchCampaign(id) {
-  if (!isSupabaseConfigured) return MOCK_CAMPAIGNS.find((c) => c.id === id) ?? null
+  if (!isSupabaseConfigured) return mockCampaigns.find((c) => c.id === id) ?? null
   const { data, error } = await supabase.from('campaigns').select('*').eq('id', id).single()
   if (error) throw error
   return data
@@ -66,7 +145,11 @@ export function useCreateCampaign() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (data) => {
-      if (!isSupabaseConfigured) return { ...data, id: Date.now().toString() }
+      if (!isSupabaseConfigured) {
+        const newC = { ...data, id: Date.now().toString() }
+        mockCampaigns = [...mockCampaigns, newC]
+        return newC
+      }
       const { data: result, error } = await supabase.from('campaigns').insert(data).select().single()
       if (error) throw error
       return result
@@ -79,12 +162,27 @@ export function useUpdateCampaign() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
-      if (!isSupabaseConfigured) return { id, ...data }
+      if (!isSupabaseConfigured) {
+        mockCampaigns = mockCampaigns.map((c) => c.id === id ? { ...c, ...data } : c)
+        return mockCampaigns.find((c) => c.id === id)
+      }
       const { data: result, error } = await supabase.from('campaigns').update(data).eq('id', id).select().single()
       if (error) throw error
       return result
     },
-    onSuccess: (_, variables) => {
+    onMutate: async ({ id, ...data }) => {
+      await qc.cancelQueries({ queryKey: ['campaigns'] })
+      const prev = qc.getQueryData(['campaigns'])
+      qc.setQueryData(['campaigns'], (old) =>
+        (old ?? []).map((c) => c.id === id ? { ...c, ...data } : c)
+      )
+      qc.setQueryData(['campaigns', id], (old) => old ? { ...old, ...data } : old)
+      return { prev }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(['campaigns'], ctx.prev)
+    },
+    onSettled: (_data, _err, variables) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] })
       qc.invalidateQueries({ queryKey: ['campaigns', variables.id] })
     },
