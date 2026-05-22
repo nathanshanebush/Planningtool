@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Folder, TableProperties, Settings2, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LayoutDashboard, Folder, TableProperties, DollarSign, Settings2, LogOut, ChevronLeft, ChevronRight } from 'lucide-react'
 import { RoleBadge } from '../shared/Badge'
 import { Avatar } from '../shared/Avatar'
 import useAuthStore from '../../store/authStore'
@@ -60,6 +60,7 @@ export function Sidebar() {
         <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
         <NavItem to="/campaigns" icon={Folder} label="Campaigns" collapsed={collapsed} />
         <NavItem to="/content" icon={TableProperties} label="Content" collapsed={collapsed} />
+        <NavItem to="/budget" icon={DollarSign} label="Budget" collapsed={collapsed} />
         <NavItem to="/admin" icon={Settings2} label="Admin" collapsed={collapsed} />
       </nav>
 

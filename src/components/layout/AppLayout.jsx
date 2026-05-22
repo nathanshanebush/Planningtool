@@ -7,6 +7,7 @@ const PAGE_TITLES = {
   '/': 'Dashboard',
   '/campaigns': 'Campaigns',
   '/content': 'Content',
+  '/budget': 'Budget',
   '/admin': 'Admin Panel',
   '/admin/dropdowns': 'Dropdown Manager',
   '/admin/users': 'User Manager',
