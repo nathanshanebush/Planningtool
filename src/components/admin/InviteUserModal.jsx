@@ -47,8 +47,26 @@ export function InviteUserModal({ open, onClose }) {
         setSuccess(true)
         return
       }
-      const { error: err } = await supabase.functions.invoke('invite-user', { body: form })
-      if (err) throw err
+      const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
+        email: form.email,
+        password: tempPassword,
+        options: {
+          data: { first_name: form.first_name, last_name: form.last_name, role: form.role },
+        },
+      })
+      if (signUpErr) throw signUpErr
+      if (signUpData?.user) {
+        const { error: profileErr } = await supabase.from('profiles').insert({
+          id: signUpData.user.id,
+          email: form.email,
+          first_name: form.first_name,
+          last_name: form.last_name,
+          role: form.role,
+          status: 'active',
+        })
+        if (profileErr && profileErr.code !== '23505') throw profileErr
+      }
       setSuccess(true)
     } catch (err) {
       setError(err.message ?? 'Failed to invite user.')
@@ -71,8 +89,8 @@ export function InviteUserModal({ open, onClose }) {
           <div className="w-12 h-12 bg-green-600/20 rounded-full flex items-center justify-center mx-auto mb-3">
             <span className="text-green-400 text-2xl">✓</span>
           </div>
-          <p className="text-white font-medium">Invitation sent!</p>
-          <p className="text-white/50 text-sm mt-1">{form.email} will receive an email to set up their account.</p>
+          <p className="text-white font-medium">Account created!</p>
+          <p className="text-white/50 text-sm mt-1">Account created. Have them use 'Forgot Password' to set their password.</p>
           <Button variant="primary" className="mt-4 mx-auto" onClick={handleClose}>Done</Button>
         </div>
       ) : (

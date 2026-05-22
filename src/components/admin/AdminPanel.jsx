@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { DropdownManager } from './DropdownManager'
 import { UserManager } from './UserManager'
 import { AuditLog } from './AuditLog'
+import { OrganizationManager } from './OrganizationManager'
 import { usePermissions } from '../../hooks/usePermissions'
 import { Shield } from 'lucide-react'
 
@@ -9,6 +10,7 @@ const TABS = [
   { id: 'dropdowns', label: 'Dropdowns' },
   { id: 'users', label: 'Users' },
   { id: 'audit', label: 'Audit Log', superAdminOnly: true },
+  { id: 'organizations', label: 'Organizations', superAdminOnly: true },
 ]
 
 export function AdminPanel() {
@@ -50,6 +52,7 @@ export function AdminPanel() {
       {tab === 'dropdowns' && <DropdownManager />}
       {tab === 'users' && <UserManager />}
       {tab === 'audit' && <AuditLog />}
+      {tab === 'organizations' && <OrganizationManager />}
     </div>
   )
 }

@@ -48,7 +48,10 @@ export function useAuth() {
         .select('*')
         .eq('id', userId)
         .single()
-      if (!error && data) setUser(data)
+      if (!error && data) {
+        setUser(data)
+        if (data.org_id) useAuthStore.getState().setCurrentOrgId(data.org_id)
+      }
     } catch (e) {
       console.error('Profile fetch error:', e)
     } finally {

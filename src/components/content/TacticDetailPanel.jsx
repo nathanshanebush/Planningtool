@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { SidePanel } from '../shared/SidePanel'
 import { DropdownField } from '../shared/DropdownField'
 import { StatusBadge, PriorityBadge } from '../shared/Badge'
-import { CreativeUpload } from './CreativeUpload'
+import { CreativePanel } from './CreativePanel'
 import { usePermissions } from '../../hooks/usePermissions'
 import { useUpdateTactic, useDeleteTactic } from '../../hooks/useTactics'
 import { MOCK_DROPDOWNS } from '../../hooks/useDropdowns'
@@ -285,7 +285,7 @@ export function TacticDetailPanel({ tactic, open, onClose }) {
 
           <div className="flex-1 overflow-y-auto">
             {tab === 'details' && <DetailsTab tactic={tactic} canEdit={canEdit} onUpdate={handleUpdate} />}
-            {tab === 'creative' && <CreativeUpload tacticId={tactic.id} />}
+            {tab === 'creative' && <CreativePanel tacticId={tactic.id} uploaderName="You" />}
             {tab === 'comments' && <CommentsTab canComment={canComment} />}
             {tab === 'history' && <HistoryTab canEdit={canEdit} />}
           </div>

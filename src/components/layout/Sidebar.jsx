@@ -6,6 +6,7 @@ import { Avatar } from '../shared/Avatar'
 import useAuthStore from '../../store/authStore'
 import useUiStore from '../../store/uiStore'
 import { useAuth } from '../../hooks/useAuth'
+import { OrgSwitcher } from './OrgSwitcher'
 
 const NavItem = ({ to, icon: Icon, label, collapsed }) => (
   <NavLink
@@ -55,6 +56,8 @@ export function Sidebar() {
           <span className="text-xl font-medium text-white tracking-wide">impera</span>
         )}
       </div>
+
+      <OrgSwitcher collapsed={collapsed} />
 
       <nav className="flex-1 p-3 space-y-1">
         <NavItem to="/" icon={LayoutDashboard} label="Dashboard" collapsed={collapsed} />
