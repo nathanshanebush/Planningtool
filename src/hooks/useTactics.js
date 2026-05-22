@@ -8,6 +8,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Offer / CTA', assigned_to: 'user1', due_date: '2026-06-15',
     status: 'In Progress', priority: 'High', copy_notes: 'Welcome email for podcast launch.',
     budget: 500, spend_to_date: 200,
+    appointments_booked: 12, leads_generated: 35, sales_count: 3, revenue_generated: 4500,
     created_by: 'user1', created_at: '2026-05-01T00:00:00Z', updated_at: '2026-05-10T00:00:00Z',
   },
   {
@@ -16,6 +17,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Education / How-To', assigned_to: 'user1', due_date: '2026-06-10',
     status: 'Needs Review', priority: 'Medium', copy_notes: '',
     budget: 300, spend_to_date: 0,
+    appointments_booked: 0, leads_generated: 0, sales_count: 0, revenue_generated: 0,
     created_by: 'user1', created_at: '2026-05-02T00:00:00Z', updated_at: '2026-05-11T00:00:00Z',
   },
   {
@@ -24,6 +26,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Pain/Problem Awareness', assigned_to: 'user3', due_date: '2026-05-20',
     status: 'Not Started', priority: 'Urgent', copy_notes: 'Focus on pain points.',
     budget: 2500, spend_to_date: 0,
+    appointments_booked: 0, leads_generated: 0, sales_count: 0, revenue_generated: 0,
     created_by: 'user1', created_at: '2026-05-03T00:00:00Z', updated_at: '2026-05-03T00:00:00Z',
   },
   {
@@ -32,6 +35,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Offer / CTA', assigned_to: 'user2', due_date: '2026-05-25',
     status: 'Approved', priority: 'High', copy_notes: '',
     budget: 2000, spend_to_date: 2000,
+    appointments_booked: 8, leads_generated: 22, sales_count: 5, revenue_generated: 7200,
     created_by: 'user1', created_at: '2026-05-04T00:00:00Z', updated_at: '2026-05-12T00:00:00Z',
   },
   {
@@ -40,6 +44,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Social Proof / Case Study', assigned_to: 'user1', due_date: '2026-07-01',
     status: 'Not Started', priority: 'Low', copy_notes: '',
     budget: 800, spend_to_date: 0,
+    appointments_booked: 0, leads_generated: 0, sales_count: 0, revenue_generated: 0,
     created_by: 'user1', created_at: '2026-05-05T00:00:00Z', updated_at: '2026-05-05T00:00:00Z',
   },
   {
@@ -48,6 +53,7 @@ const MOCK_TACTICS = [
     content_pillar: 'Team / Culture', assigned_to: 'user3', due_date: '2026-06-05',
     status: 'On Hold', priority: 'Medium', copy_notes: '',
     budget: 400, spend_to_date: 100,
+    appointments_booked: 0, leads_generated: 0, sales_count: 0, revenue_generated: 0,
     created_by: 'user1', created_at: '2026-05-06T00:00:00Z', updated_at: '2026-05-13T00:00:00Z',
   },
 ]

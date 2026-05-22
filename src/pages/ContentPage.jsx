@@ -1,7 +1,8 @@
 import React, { useState } from 'react'
-import { TableProperties, Kanban } from 'lucide-react'
+import { TableProperties, Kanban, BarChart2 } from 'lucide-react'
 import { SpreadView } from '../components/content/SpreadView'
 import { KanbanView } from '../components/content/KanbanView'
+import { ROIView } from '../components/content/ROIView'
 
 export default function ContentPage() {
   const [view, setView] = useState('spread')
@@ -28,11 +29,20 @@ export default function ContentPage() {
           >
             <Kanban size={14} /> Kanban
           </button>
+          <button
+            onClick={() => setView('roi')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium transition-colors
+              ${view === 'roi' ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white'}`}
+          >
+            <BarChart2 size={14} /> ROI
+          </button>
         </div>
       </div>
 
       <div className="flex-1 min-h-0">
-        {view === 'spread' ? <SpreadView /> : <KanbanView />}
+        {view === 'spread' && <SpreadView />}
+        {view === 'kanban' && <KanbanView />}
+        {view === 'roi' && <ROIView />}
       </div>
     </div>
   )

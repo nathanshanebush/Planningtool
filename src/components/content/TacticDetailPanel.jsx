@@ -91,6 +91,81 @@ function DetailsTab({ tactic, canEdit, onUpdate }) {
           )}
         </div>
       )}
+
+      <ROISection tactic={tactic} canEdit={canEdit} onUpdate={onUpdate} />
+    </div>
+  )
+}
+
+function ROINumberInput({ label, field, value, canEdit, tacticId, onUpdate }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(String(value ?? 0))
+
+  const commit = () => {
+    const parsed = parseFloat(draft)
+    if (!isNaN(parsed) && parsed !== value) {
+      onUpdate({ id: tacticId, [field]: parsed })
+    }
+    setEditing(false)
+  }
+
+  return (
+    <div>
+      <label className="text-xs text-white/50 font-medium block mb-1">{label}</label>
+      {canEdit && editing ? (
+        <input
+          autoFocus
+          type="number"
+          min="0"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+          className="w-full bg-coal border border-orange/60 text-white rounded-md px-3 py-1.5 text-sm outline-none"
+        />
+      ) : (
+        <p
+          className={`text-white text-sm px-3 py-1.5 rounded-md border border-transparent ${canEdit ? 'cursor-pointer hover:border-white/20 hover:bg-white/5' : ''}`}
+          onClick={() => canEdit && setEditing(true)}
+        >
+          {field === 'revenue_generated' ? `$${(value ?? 0).toLocaleString()}` : (value ?? 0).toLocaleString()}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function ROISection({ tactic, canEdit, onUpdate }) {
+  const budget = tactic.budget || 0
+  const leads = tactic.leads_generated || 0
+  const revenue = tactic.revenue_generated || 0
+
+  const costPerLead = leads > 0 ? budget / leads : null
+  const roi = budget > 0 ? ((revenue - budget) / budget) * 100 : revenue > 0 ? 100 : null
+
+  return (
+    <div className="border-t border-white/10 pt-4">
+      <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">ROI &amp; Results</h3>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <ROINumberInput label="Appt. Booked" field="appointments_booked" value={tactic.appointments_booked} canEdit={canEdit} tacticId={tactic.id} onUpdate={onUpdate} />
+        <ROINumberInput label="Leads Generated" field="leads_generated" value={tactic.leads_generated} canEdit={canEdit} tacticId={tactic.id} onUpdate={onUpdate} />
+        <ROINumberInput label="Sales Closed" field="sales_count" value={tactic.sales_count} canEdit={canEdit} tacticId={tactic.id} onUpdate={onUpdate} />
+        <ROINumberInput label="Revenue Generated" field="revenue_generated" value={tactic.revenue_generated} canEdit={canEdit} tacticId={tactic.id} onUpdate={onUpdate} />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        <div className="flex items-center gap-1.5 bg-jet border border-white/10 rounded-full px-3 py-1">
+          <span className="text-xs text-white/50">Cost/Lead</span>
+          <span className="text-xs font-semibold text-white">
+            {costPerLead !== null ? `$${costPerLead.toFixed(2)}` : '—'}
+          </span>
+        </div>
+        <div className={`flex items-center gap-1.5 bg-jet border rounded-full px-3 py-1 ${roi === null ? 'border-white/10' : roi > 0 ? 'border-green-500/30' : roi < 0 ? 'border-red-500/30' : 'border-white/10'}`}>
+          <span className="text-xs text-white/50">ROI</span>
+          <span className={`text-xs font-semibold ${roi === null ? 'text-white/40' : roi > 0 ? 'text-green-400' : roi < 0 ? 'text-red-400' : 'text-white/40'}`}>
+            {roi !== null ? `${roi > 0 ? '+' : ''}${roi.toFixed(1)}%` : '—'}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

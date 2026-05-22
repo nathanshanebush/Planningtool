@@ -4,6 +4,7 @@ import { Button } from '../shared/Button'
 import { DropdownField } from '../shared/DropdownField'
 import { usePermissions } from '../../hooks/usePermissions'
 import { supabase, isSupabaseConfigured } from '../../lib/supabase'
+import { useAddUser } from '../../hooks/useUsers'
 
 const ROLE_OPTIONS_BY_LEVEL = {
   admin: ['viewer', 'contributor', 'editor'],
@@ -12,6 +13,7 @@ const ROLE_OPTIONS_BY_LEVEL = {
 
 export function InviteUserModal({ open, onClose }) {
   const { role } = usePermissions()
+  const addUser = useAddUser()
   const [form, setForm] = useState({ first_name: '', last_name: '', email: '', role: 'viewer' })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -28,7 +30,20 @@ export function InviteUserModal({ open, onClose }) {
     setError('')
     try {
       if (!isSupabaseConfigured) {
-        await new Promise((r) => setTimeout(r, 600))
+        await new Promise((resolve, reject) => {
+          addUser.mutate(
+            {
+              first_name: form.first_name,
+              last_name: form.last_name,
+              email: form.email,
+              role: form.role,
+              status: 'active',
+              id: `u${Date.now()}`,
+              created_at: new Date().toISOString(),
+            },
+            { onSuccess: resolve, onError: reject }
+          )
+        })
         setSuccess(true)
         return
       }

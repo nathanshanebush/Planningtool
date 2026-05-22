@@ -5,13 +5,7 @@ import { Button } from '../shared/Button'
 import { RoleBadge } from '../shared/Badge'
 import { InviteUserModal } from './InviteUserModal'
 import { usePermissions } from '../../hooks/usePermissions'
-
-const MOCK_USERS = [
-  { id: 'u1', first_name: 'Jordan', last_name: 'Lee', email: 'jordan@example.com', role: 'super_admin', status: 'active', created_at: '2026-01-01T00:00:00Z' },
-  { id: 'u2', first_name: 'Alex', last_name: 'Kim', email: 'alex@example.com', role: 'editor', status: 'active', created_at: '2026-02-10T00:00:00Z' },
-  { id: 'u3', first_name: 'Morgan', last_name: 'Taylor', email: 'morgan@example.com', role: 'contributor', status: 'active', created_at: '2026-03-15T00:00:00Z' },
-  { id: 'u4', first_name: 'Casey', last_name: 'Rivera', email: 'casey@example.com', role: 'viewer', status: 'deactivated', created_at: '2026-04-01T00:00:00Z' },
-]
+import { useUsers, useUpdateUser, useDeactivateUser } from '../../hooks/useUsers'
 
 const ROLE_OPTIONS_BY_ROLE = {
   admin: ['viewer', 'contributor', 'editor'],
@@ -20,11 +14,19 @@ const ROLE_OPTIONS_BY_ROLE = {
 
 export function UserManager() {
   const { role, isSuperAdmin } = usePermissions()
-  const [users, setUsers] = useState(MOCK_USERS)
+  const { data: users = [] } = useUsers()
+  const updateUser = useUpdateUser()
+  const deactivateUser = useDeactivateUser()
   const [showInvite, setShowInvite] = useState(false)
 
-  const updateRole = (id, newRole) => setUsers((prev) => prev.map((u) => u.id === id ? { ...u, role: newRole } : u))
-  const toggleStatus = (id) => setUsers((prev) => prev.map((u) => u.id === id ? { ...u, status: u.status === 'active' ? 'deactivated' : 'active' } : u))
+  const updateRole = (id, newRole) => updateUser.mutate({ id, role: newRole })
+  const toggleStatus = (id, currentStatus) => {
+    if (currentStatus === 'active') {
+      deactivateUser.mutate(id)
+    } else {
+      updateUser.mutate({ id, status: 'active' })
+    }
+  }
 
   const availableRoles = ROLE_OPTIONS_BY_ROLE[role] ?? []
 
@@ -80,7 +82,7 @@ export function UserManager() {
                   <Button
                     variant={u.status === 'active' ? 'danger' : 'secondary'}
                     size="sm"
-                    onClick={() => toggleStatus(u.id)}
+                    onClick={() => toggleStatus(u.id, u.status)}
                   >
                     {u.status === 'active' ? 'Deactivate' : 'Reactivate'}
                   </Button>

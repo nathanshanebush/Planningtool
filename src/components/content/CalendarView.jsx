@@ -17,6 +17,13 @@ const STATUS_STYLES = {
   'On Hold': 'bg-purple-500/20 text-purple-400',
 }
 
+const CAMPAIGN_STATUS_STYLES = {
+  active: 'bg-green-500/30 text-green-400',
+  planning: 'bg-blue-500/30 text-blue-400',
+  paused: 'bg-amber-500/30 text-amber-400',
+  completed: 'bg-white/10 text-white/40',
+}
+
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function buildCalendarDays(month) {
@@ -45,6 +52,14 @@ export function CalendarView() {
 
   const tacticsForDay = (day) =>
     tactics.filter((t) => t.due_date && isSameDay(parseISO(t.due_date), day))
+
+  const campaignsForDay = (day) =>
+    campaigns.filter((c) => {
+      if (!c.start_date || !c.end_date) return false
+      const start = parseISO(c.start_date)
+      const end = parseISO(c.end_date)
+      return day >= start && day <= end
+    })
 
   return (
     <div className="flex flex-col h-full">
@@ -105,6 +120,9 @@ export function CalendarView() {
             const dayTactics = tacticsForDay(day)
             const visible = dayTactics.slice(0, 3)
             const overflow = dayTactics.length - 3
+            const dayCampaigns = campaignsForDay(day)
+            const visibleCampaigns = dayCampaigns.slice(0, 2)
+            const campaignOverflow = dayCampaigns.length - 2
 
             return (
               <div
@@ -120,6 +138,19 @@ export function CalendarView() {
                 >
                   {format(day, 'd')}
                 </span>
+                {visibleCampaigns.map((c) => (
+                  <div
+                    key={c.id}
+                    className={`w-full text-[10px] font-medium px-1.5 py-0.5 rounded truncate leading-4
+                      ${CAMPAIGN_STATUS_STYLES[c.status] ?? 'bg-white/10 text-white/40'}`}
+                    title={c.name}
+                  >
+                    {c.name.length > 12 ? c.name.slice(0, 12) + '…' : c.name}
+                  </div>
+                ))}
+                {campaignOverflow > 0 && (
+                  <span className="text-[10px] text-white/30 px-1">+{campaignOverflow} campaign{campaignOverflow > 1 ? 's' : ''}</span>
+                )}
                 {visible.map((t) => (
                   <button
                     key={t.id}
