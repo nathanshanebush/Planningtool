@@ -2,6 +2,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export const MOCK_DROPDOWNS = {
+  'Target Market': [
+    'Physical Therapy',
+    'Audiology',
+    'Ophthalmology',
+    'Direct Primary Care (DPC)',
+    'Medical Group Management',
+    'Oral Surgery',
+    'Optometry',
+    'Chiropractic',
+    'ENT / Hearing',
+    'Dental',
+    'Veterinary',
+    'All Markets',
+  ],
   'Budget Category': [
     'Tradeshows / Events',
     'Digital & Online Marketing',
