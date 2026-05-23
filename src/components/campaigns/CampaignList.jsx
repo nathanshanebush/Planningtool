@@ -63,7 +63,7 @@ function SortableCampaignCard({ campaign }) {
 
 function CreateCampaignModal({ open, onClose }) {
   const createCampaign = useCreateCampaign()
-  const [form, setForm] = useState({ name: '', campaign_type: '', description: '', start_date: '', end_date: '' })
+  const [form, setForm] = useState({ name: '', campaign_type: '', budget_category: '', description: '', start_date: '', end_date: '' })
 
   const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }))
 
@@ -71,7 +71,7 @@ function CreateCampaignModal({ open, onClose }) {
     e.preventDefault()
     await createCampaign.mutateAsync(form)
     onClose()
-    setForm({ name: '', campaign_type: '', description: '', start_date: '', end_date: '' })
+    setForm({ name: '', campaign_type: '', budget_category: '', description: '', start_date: '', end_date: '' })
   }
 
   return (
@@ -87,12 +87,20 @@ function CreateCampaignModal({ open, onClose }) {
             className="w-full bg-coal border border-white/10 text-white placeholder-white/30 rounded-lg px-3 py-2 text-sm outline-none focus:border-orange/60"
           />
         </div>
-        <DropdownField
-          label="Campaign Type"
-          value={form.campaign_type}
-          options={MOCK_DROPDOWNS['Campaign Type']}
-          onChange={set('campaign_type')}
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <DropdownField
+            label="Campaign Type"
+            value={form.campaign_type}
+            options={MOCK_DROPDOWNS['Campaign Type']}
+            onChange={set('campaign_type')}
+          />
+          <DropdownField
+            label="Budget Category"
+            value={form.budget_category}
+            options={MOCK_DROPDOWNS['Budget Category']}
+            onChange={set('budget_category')}
+          />
+        </div>
         <div>
           <label className="text-xs font-medium text-white/60 block mb-1.5">Description</label>
           <textarea

@@ -110,6 +110,9 @@ export function CampaignCard({ campaign }) {
         <span className={`text-xs px-2 py-0.5 rounded font-medium ${statusColors[campaign.status] ?? 'bg-white/10 text-white/50'}`}>
           {campaign.status}
         </span>
+        {campaign.budget_category && (
+          <span className="text-xs bg-orange/10 text-orange/80 border border-orange/20 px-2 py-0.5 rounded">{campaign.budget_category}</span>
+        )}
       </div>
 
       {campaign.description && (

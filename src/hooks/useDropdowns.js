@@ -2,6 +2,16 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 
 export const MOCK_DROPDOWNS = {
+  'Budget Category': [
+    'Tradeshows / Events',
+    'Digital & Online Marketing',
+    'Broadcast Media',
+    'Outreach & Direct Sales',
+    'Affiliate Referrals',
+    'Print Media / Direct Mail',
+    'Corporate & Brand Initiatives',
+    'Admin',
+  ],
   'Campaign Type': ['Podcast/Webinar', 'Trade Show', 'Blog', 'Email/SMS', 'Paid Ads', 'Organic Social'],
   'Traffic Source': ['Paid Ads', 'Social Media Organic', 'Email/SMS'],
   'Funnel Step': ['Landing Page', 'Thank You Page', 'Retargeting Page'],

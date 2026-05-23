@@ -17,6 +17,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
   const [form, setForm] = useState({
     name: '',
     campaign_type: '',
+    budget_category: '',
     description: '',
     start_date: '',
     end_date: '',
@@ -31,6 +32,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
       setForm({
         name: campaign.name ?? '',
         campaign_type: campaign.campaign_type ?? '',
+        budget_category: campaign.budget_category ?? '',
         description: campaign.description ?? '',
         start_date: campaign.start_date ?? '',
         end_date: campaign.end_date ?? '',
@@ -50,6 +52,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
       id: campaign.id,
       name: form.name,
       campaign_type: form.campaign_type,
+      budget_category: form.budget_category || null,
       description: form.description,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
@@ -100,6 +103,15 @@ export function EditCampaignModal({ campaign, open, onClose }) {
             onChange={set('status')}
           />
         </div>
+
+        {/* Budget Category */}
+        <DropdownField
+          label="Budget Category"
+          value={form.budget_category}
+          options={MOCK_DROPDOWNS['Budget Category']}
+          onChange={set('budget_category')}
+          placeholder="Select budget category…"
+        />
 
         {/* Description */}
         <div>
