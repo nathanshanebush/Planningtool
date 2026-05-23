@@ -116,8 +116,22 @@ export const MOCK_CAMPAIGNS = [
   },
 ]
 
-// In-memory store for mock optimistic updates
-let mockCampaigns = MOCK_CAMPAIGNS.map((c) => ({ ...c }))
+// Persist mock data to localStorage so it survives page refreshes in demo mode
+const CAMPAIGNS_STORAGE_KEY = 'impera_mock_campaigns'
+
+function loadMockCampaigns() {
+  try {
+    const stored = localStorage.getItem(CAMPAIGNS_STORAGE_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch {}
+  return MOCK_CAMPAIGNS.map((c) => ({ ...c }))
+}
+
+function saveMockCampaigns(data) {
+  try { localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(data)) } catch {}
+}
+
+let mockCampaigns = loadMockCampaigns()
 
 async function fetchCampaigns() {
   if (!isSupabaseConfigured) return mockCampaigns
@@ -146,8 +160,9 @@ export function useCreateCampaign() {
   return useMutation({
     mutationFn: async (data) => {
       if (!isSupabaseConfigured) {
-        const newC = { ...data, id: Date.now().toString() }
+        const newC = { ...data, id: Date.now().toString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         mockCampaigns = [...mockCampaigns, newC]
+        saveMockCampaigns(mockCampaigns)
         return newC
       }
       const { data: result, error } = await supabase.from('campaigns').insert(data).select().single()
@@ -164,6 +179,7 @@ export function useDeleteCampaign() {
     mutationFn: async (id) => {
       if (!isSupabaseConfigured) {
         mockCampaigns = mockCampaigns.filter(c => c.id !== id)
+        saveMockCampaigns(mockCampaigns)
         return id
       }
       const { error } = await supabase.from('campaigns').delete().eq('id', id)
@@ -179,7 +195,8 @@ export function useUpdateCampaign() {
   return useMutation({
     mutationFn: async ({ id, ...data }) => {
       if (!isSupabaseConfigured) {
-        mockCampaigns = mockCampaigns.map((c) => c.id === id ? { ...c, ...data } : c)
+        mockCampaigns = mockCampaigns.map((c) => c.id === id ? { ...c, ...data, updated_at: new Date().toISOString() } : c)
+        saveMockCampaigns(mockCampaigns)
         return mockCampaigns.find((c) => c.id === id)
       }
       const { data: result, error } = await supabase.from('campaigns').update(data).eq('id', id).select().single()

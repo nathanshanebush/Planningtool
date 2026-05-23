@@ -58,7 +58,21 @@ const MOCK_TACTICS = [
   },
 ]
 
-let mockTactics = MOCK_TACTICS.map((t) => ({ ...t }))
+const TACTICS_STORAGE_KEY = 'impera_mock_tactics'
+
+function loadMockTactics() {
+  try {
+    const stored = localStorage.getItem(TACTICS_STORAGE_KEY)
+    if (stored) return JSON.parse(stored)
+  } catch {}
+  return MOCK_TACTICS.map((t) => ({ ...t }))
+}
+
+function saveMockTactics(data) {
+  try { localStorage.setItem(TACTICS_STORAGE_KEY, JSON.stringify(data)) } catch {}
+}
+
+let mockTactics = loadMockTactics()
 
 async function fetchTactics(filters = {}) {
   if (!isSupabaseConfigured) {
@@ -99,6 +113,7 @@ export function useCreateTactic() {
       if (!isSupabaseConfigured) {
         const newT = { ...data, id: `t${Date.now()}`, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }
         mockTactics = [...mockTactics, newT]
+        saveMockTactics(mockTactics)
         return newT
       }
       const { data: result, error } = await supabase.from('tactics').insert(data).select().single()
@@ -115,7 +130,8 @@ export function useUpdateTactic() {
     mutationFn: async ({ id, ...data }) => {
       if (!isSupabaseConfigured) {
         const idx = mockTactics.findIndex(t => t.id === id)
-        if (idx !== -1) Object.assign(mockTactics[idx], data)
+        if (idx !== -1) Object.assign(mockTactics[idx], data, { updated_at: new Date().toISOString() })
+        saveMockTactics(mockTactics)
         return { id, ...mockTactics[idx] }
       }
       const { data: result, error } = await supabase.from('tactics').update(data).eq('id', id).select().single()
@@ -135,6 +151,7 @@ export function useDeleteTactic() {
     mutationFn: async (id) => {
       if (!isSupabaseConfigured) {
         mockTactics = mockTactics.filter((t) => t.id !== id)
+        saveMockTactics(mockTactics)
         return id
       }
       const { error } = await supabase.from('tactics').delete().eq('id', id)
