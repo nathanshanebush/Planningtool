@@ -63,7 +63,7 @@ function SortableCampaignCard({ campaign }) {
 
 function CreateCampaignModal({ open, onClose }) {
   const createCampaign = useCreateCampaign()
-  const [form, setForm] = useState({ name: '', campaign_type: '', budget_category: '', description: '', start_date: '', end_date: '' })
+  const [form, setForm] = useState({ name: '', campaign_type: '', budget_category: '', target_market: '', description: '', start_date: '', end_date: '' })
 
   const set = (key) => (val) => setForm((f) => ({ ...f, [key]: val }))
 
@@ -71,7 +71,7 @@ function CreateCampaignModal({ open, onClose }) {
     e.preventDefault()
     await createCampaign.mutateAsync(form)
     onClose()
-    setForm({ name: '', campaign_type: '', budget_category: '', description: '', start_date: '', end_date: '' })
+    setForm({ name: '', campaign_type: '', budget_category: '', target_market: '', description: '', start_date: '', end_date: '' })
   }
 
   return (
@@ -99,6 +99,15 @@ function CreateCampaignModal({ open, onClose }) {
             value={form.budget_category}
             options={MOCK_DROPDOWNS['Budget Category']}
             onChange={set('budget_category')}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <DropdownField
+            label="Target Market"
+            value={form.target_market}
+            options={MOCK_DROPDOWNS['Target Market']}
+            onChange={set('target_market')}
+            placeholder="Select target market…"
           />
         </div>
         <div>

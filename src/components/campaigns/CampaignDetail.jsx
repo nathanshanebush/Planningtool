@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X, Pencil, Plus } from 'lucide-react'
+import { ArrowLeft, Calendar, Tag, Kanban, TableProperties, Edit2, Check, X, Pencil, Plus, Target } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { useCampaign, useUpdateCampaign } from '../../hooks/useCampaigns'
 import { useTactics, useCreateTactic } from '../../hooks/useTactics'
@@ -202,12 +202,22 @@ export function CampaignDetail() {
         <div className="flex items-start justify-between gap-4 mb-4">
           <div>
             <h2 className="text-2xl font-semibold text-white">{campaign.name}</h2>
-            {campaign.campaign_type && (
-              <div className="flex items-center gap-1.5 mt-2 text-white/50 text-sm">
-                <Tag size={14} />
-                <span>{campaign.campaign_type}</span>
-              </div>
-            )}
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {campaign.target_market && (
+                <div className="flex items-center gap-1.5">
+                  <Target size={13} className="text-violet-400" />
+                  <span className="text-xs font-medium text-violet-300 bg-violet-500/15 border border-violet-500/25 px-2 py-0.5 rounded-full">
+                    {campaign.target_market}
+                  </span>
+                </div>
+              )}
+              {campaign.campaign_type && (
+                <div className="flex items-center gap-1.5 text-white/50 text-sm">
+                  <Tag size={14} />
+                  <span>{campaign.campaign_type}</span>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span

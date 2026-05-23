@@ -18,6 +18,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
     name: '',
     campaign_type: '',
     budget_category: '',
+    target_market: '',
     description: '',
     start_date: '',
     end_date: '',
@@ -33,6 +34,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
         name: campaign.name ?? '',
         campaign_type: campaign.campaign_type ?? '',
         budget_category: campaign.budget_category ?? '',
+        target_market: campaign.target_market ?? '',
         description: campaign.description ?? '',
         start_date: campaign.start_date ?? '',
         end_date: campaign.end_date ?? '',
@@ -53,6 +55,7 @@ export function EditCampaignModal({ campaign, open, onClose }) {
       name: form.name,
       campaign_type: form.campaign_type,
       budget_category: form.budget_category || null,
+      target_market: form.target_market || null,
       description: form.description,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
@@ -104,14 +107,23 @@ export function EditCampaignModal({ campaign, open, onClose }) {
           />
         </div>
 
-        {/* Budget Category */}
-        <DropdownField
-          label="Budget Category"
-          value={form.budget_category}
-          options={MOCK_DROPDOWNS['Budget Category']}
-          onChange={set('budget_category')}
-          placeholder="Select budget category…"
-        />
+        {/* Budget Category + Target Market */}
+        <div className="grid grid-cols-2 gap-3">
+          <DropdownField
+            label="Budget Category"
+            value={form.budget_category}
+            options={MOCK_DROPDOWNS['Budget Category']}
+            onChange={set('budget_category')}
+            placeholder="Select budget category…"
+          />
+          <DropdownField
+            label="Target Market"
+            value={form.target_market}
+            options={MOCK_DROPDOWNS['Target Market']}
+            onChange={set('target_market')}
+            placeholder="Select target market…"
+          />
+        </div>
 
         {/* Description */}
         <div>

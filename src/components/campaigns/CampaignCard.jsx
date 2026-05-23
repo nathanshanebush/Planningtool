@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { format, parseISO } from 'date-fns'
-import { Calendar, ArrowRight, Edit2, Check, X, Pencil } from 'lucide-react'
+import { Calendar, ArrowRight, Edit2, Check, X, Pencil, Target, Users } from 'lucide-react'
 import { useTactics } from '../../hooks/useTactics'
 import { useUpdateCampaign } from '../../hooks/useCampaigns'
 import { EditCampaignModal } from './EditCampaignModal'
@@ -89,7 +89,7 @@ export function CampaignCard({ campaign }) {
       onClick={() => navigate(`/campaigns/${campaign.id}`)}
       className="bg-jet rounded-xl border border-white/10 p-5 cursor-pointer hover:border-white/20 transition-all group"
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-3 mb-2">
         <h3 className="text-base font-semibold text-white group-hover:text-white/90 leading-tight">{campaign.name}</h3>
         <div className="flex items-center gap-1 shrink-0 mt-0.5">
           <button
@@ -102,6 +102,15 @@ export function CampaignCard({ campaign }) {
           <ArrowRight size={16} className="text-white/30 group-hover:text-orange transition-colors" />
         </div>
       </div>
+
+      {campaign.target_market && (
+        <div className="flex items-center gap-1.5 mb-3">
+          <Target size={12} className="text-violet-400 shrink-0" />
+          <span className="text-xs font-medium text-violet-300 bg-violet-500/15 border border-violet-500/25 px-2 py-0.5 rounded-full">
+            {campaign.target_market}
+          </span>
+        </div>
+      )}
 
       <div className="flex flex-wrap gap-2 mb-4">
         {campaign.campaign_type && (
