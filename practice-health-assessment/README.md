@@ -8,8 +8,16 @@ by email. A lead-alert email is sent to Nathan for every completion.
 Six dimensions scored: Leadership, Operational, Communication, Staffing,
 Technology & AI, Financial.
 
-It's one static HTML file — no server, no database, no build. It handles any
-number of simultaneous takers because everything runs in the browser.
+Two files, no build step:
+
+- **`index.html`** — what attendees take. Runs entirely in the browser; handles
+  any number of simultaneous takers.
+- **`dashboard.html`** — private, login-protected. See every response, a live
+  radar/insight view you can project during a talk, and trends across every
+  session you've ever run.
+
+The only backend is a free [Supabase](https://supabase.com) project (Postgres +
+login) — no server to run yourself.
 
 ## 1. Set up EmailJS (free)
 
@@ -30,51 +38,81 @@ from the page — no backend.
 5. Copy each **Template ID**.
 6. Account → API Keys → copy your **Public Key**.
 
-## 2. Configure the app
+Fill those four values into `CONFIG` near the top of `index.html`'s `<script>` block.
 
-Open `index.html`, find the `CONFIG` object near the top of the `<script>` block,
-and fill in the four values:
+## 2. Set up the backend (Supabase)
 
-```js
-const CONFIG = {
-  emailPublicKey: 'YOUR_EMAILJS_PUBLIC_KEY',
-  emailServiceId: 'YOUR_EMAILJS_SERVICE_ID',
-  clientTemplateId: 'YOUR_CLIENT_TEMPLATE_ID',
-  ownerTemplateId: 'YOUR_OWNER_TEMPLATE_ID',
-  ownerEmail: 'you@nathanbushmba.com',
-  bookingLink: 'https://calendly.com/your-link',
-};
-```
+This is what powers `dashboard.html` — logins, saved results, sessions, the live
+projector view.
 
-The "Talk through my scorecard" button link is set via `bookingLink`
-(currently your Calendly).
+1. Create a free account at [supabase.com](https://supabase.com) → **New project**.
+2. Open **SQL Editor** → **New query**, paste in the entire contents of
+   `supabase-schema.sql`, and run it. (Safe to re-run if you ever need to.)
+3. **Project Settings → API** → copy the **Project URL** and the **`anon` `public`
+   key**. These are safe to put in client-side code — what actually protects the
+   data is the row-level-security policies the SQL just created, not secrecy of
+   this key.
+4. Paste both values into `CONFIG` near the top of **both** `index.html`'s and
+   `dashboard.html`'s `<script>` blocks (`supabaseUrl` and `supabaseAnonKey`).
+5. **Authentication → Users → Add user** — create your own login (your email +
+   a password you choose). This is the only account that can ever log into
+   `dashboard.html`. There is no public sign-up.
+6. In `dashboard.html`'s `CONFIG`, set `assessmentUrl` to wherever `index.html`
+   actually lives (default is `https://nathanbushmba.com/assessment/`) — it's
+   used to build the attendee links shown on the Sessions tab.
 
-## 3. Test before going live
+## 3. Running a presentation (Sessions)
 
-Open the page with `?debug=1` appended to the URL and complete it once.
-The line under your scores reports what happened:
+Before a talk, log into `dashboard.html` → **Sessions** tab → name it (e.g.
+"Ohio Dental Society — Keynote") → **Create Session**. You get two links:
 
-- **green** — both emails accepted by EmailJS. Check your inbox and spam.
-- **orange** — send skipped; the four `CONFIG` values aren't all filled in.
-- **red** — EmailJS rejected the send; the message tells you why.
+- **Attendee link** — share this (QR code, slide, etc.) instead of the bare
+  assessment URL. Everyone who completes it through this link is grouped under
+  this session, with their own name attached to the group.
+- **Live screen link** — safe to put on the projector or hand to an AV
+  operator. No login needed, no names/emails/phones ever shown — just the
+  room's aggregate radar, a tier breakdown, an auto-generated insight about
+  the room's weakest dimension, and 3 discussion questions pulled to match it.
+  It updates on its own as responses come in.
 
-Cross-check in EmailJS → Email History, which logs every send.
+The live link only works once you flip the session's **Public** toggle on —
+that's deliberate, so nothing is projectable until you choose to.
 
-Most common failure: the template's **To Email** field is left blank. It must
-be `{{to_email}}` in both templates.
+Your own leads (names, emails, phones, full breakdowns) stay on the **Leads**
+tab, which always requires login.
 
-## 4. Deploy
+## 4. Test before going live
 
-Upload `index.html` to your web host as `public_html/assessment/index.html`.
-It's then live at `nathanbushmba.com/assessment`.
+Open `index.html` with `?debug=1` appended to the URL and complete it once.
+The lines under your scores report what happened:
+
+- **green** — accepted (by EmailJS, or saved to the dashboard).
+- **orange** — skipped; the relevant `CONFIG` values aren't all filled in.
+- **red** — rejected; the message tells you why.
+
+Cross-check emails in EmailJS → Email History, and check the response shows up
+under `dashboard.html`'s Leads tab.
+
+Most common EmailJS failure: a template's **To Email** field left blank — it
+must be `{{to_email}}` in both templates.
+
+## 5. Deploy
+
+Upload `index.html` **and** `dashboard.html` to your web host as
+`public_html/assessment/index.html` and `public_html/assessment/dashboard.html`.
+They're then live at `nathanbushmba.com/assessment` and
+`nathanbushmba.com/assessment/dashboard.html`.
 
 ## Notes
 
-- **Free tier volume:** EmailJS free allows ~200 sends/month. Each completion is 2
-  emails, so free covers ~100 people/month. For a large event, upgrade for that
-  month, then downgrade. Past the cap nothing breaks — attendees still see and
-  download their scorecard; only the emails stop.
-- **Security:** in EmailJS → Account → Security, add `nathanbushmba.com` to allowed
-  origins so no one else can send through your keys.
-- **Editing the assessment:** see `CLAUDE.md` for the scoring rules — keep exactly
-  5 questions per dimension.
+- **Free tier volume:** EmailJS free allows ~200 sends/month (100 people, since
+  each completion is 2 emails). Supabase's free tier comfortably covers far more
+  than that. For an unusually large event, upgrade EmailJS for that month, then
+  downgrade — nothing breaks past the cap, attendees still see/download their
+  scorecard and their result still saves to the dashboard; only the emails stop.
+- **Security:** in EmailJS → Account → Security, add `nathanbushmba.com` to
+  allowed origins so no one else can send through your keys. Supabase's actual
+  protection is the RLS policies in `supabase-schema.sql` — review them before
+  changing who can read/write what.
+- **Editing the assessment:** see `CLAUDE.md` for the scoring rules — keep
+  exactly 5 questions per dimension.

@@ -90,7 +90,7 @@
     margin:0 0 6px;
   }
   .field{margin-bottom:16px;}
-  input[type="text"], input[type="email"], input[type="tel"]{
+  input[type="text"], input[type="email"], input[type="tel"], select{
     width:100%;
     padding:12px 14px;
     font-size:15px;
@@ -100,7 +100,16 @@
     background:var(--paper);
     color:var(--ink);
   }
-  input:focus{
+  select{
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235a6472'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+    background-size:18px;
+    padding-right:38px;
+  }
+  select:invalid{color:var(--muted);}
+  input:focus, select:focus{
     outline:none;
     border-color:var(--gold);
   }
@@ -320,16 +329,37 @@
     clientTemplateId: 'template_vmtdc7v',
     ownerTemplateId:  'template_906f092',
     ownerEmail:       'Nbush@nathanbushmba.com',
-    bookingLink:      'https://calendar.app.google/2WpHauUz14gBGDpE6'
+    bookingLink:      'https://calendar.app.google/2WpHauUz14gBGDpE6',
+    // Dashboard backend — see README.md "Set up the backend (Supabase)".
+    // Both values are safe to expose in client-side code; access to the
+    // data itself is controlled by the RLS policies in supabase-schema.sql,
+    // not by keeping this key secret.
+    supabaseUrl:      'YOUR_SUPABASE_URL',
+    supabaseAnonKey:  'YOUR_SUPABASE_ANON_KEY'
   };
 
   const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
+
+  // Which presentation this taker belongs to. Nathan generates this link
+  // per-event from the Sessions tab in dashboard.html; without it, results
+  // are grouped under 'general'.
+  const SESSION_SLUG = new URLSearchParams(window.location.search).get('session') || 'general';
 
   /* ============================================================
      DIMENSIONS & QUESTIONS — see CLAUDE.md before editing.
      Exactly 5 questions per dimension. Options are ordered
      weakest (score 1) to strongest (score 4).
      ============================================================ */
+  const PRACTICE_TYPES = [
+    'Dental',
+    'Chiropractic',
+    'Physical Therapy',
+    'Vision / Optometry',
+    'Medical / Primary Care',
+    'Veterinary',
+    'Other'
+  ];
+
   const DIMENSIONS = [
     { key:'leadership',    label:'Leadership',      short:'Leadership' },
     { key:'operational',   label:'Operational',     short:'Operations' },
@@ -552,10 +582,11 @@
      STATE (in-memory only — no localStorage/sessionStorage)
      ============================================================ */
   let step = 'start';       // 'start' | 0..29 (question index) | 'results'
-  let contact = { name:'', email:'', phone:'', title:'', organization:'' };
+  let contact = { name:'', email:'', phone:'', title:'', organization:'', practiceType:'' };
   let answers = new Array(QUESTIONS.length).fill(null);
   let scores = null;
-  let sendStatus = null;    // { level:'green'|'orange'|'red', message:string }
+  let sendStatus = null;    // { level:'green'|'orange'|'red', message:string } — email delivery
+  let dbStatus = null;      // { level:'green'|'orange'|'red', message:string } — dashboard save
 
   const app = document.getElementById('app');
 
@@ -608,7 +639,7 @@
           <label>Email <span class="req">*</span></label>
           <input type="email" id="f-email" placeholder="jane@practice.com" value="${escapeAttr(contact.email)}">
         </div>
-        <div class="err" id="f-err">Please enter your name and a valid email.</div>
+        <div class="err" id="f-err">Please enter your name, a valid email, and your practice type.</div>
         <div class="field">
           <label>Phone</label>
           <input type="tel" id="f-phone" placeholder="(555) 555-5555" value="${escapeAttr(contact.phone)}">
@@ -621,6 +652,13 @@
           <label>Practice / Organization</label>
           <input type="text" id="f-org" placeholder="Practice name" value="${escapeAttr(contact.organization)}">
         </div>
+        <div class="field">
+          <label>Practice Type <span class="req">*</span></label>
+          <select id="f-practice-type">
+            <option value="" ${!contact.practiceType ? 'selected' : ''} disabled>Select one…</option>
+            ${PRACTICE_TYPES.map(t => `<option value="${escapeAttr(t)}" ${contact.practiceType === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
+          </select>
+        </div>
 
         <button class="btn btn-gold" id="startBtn">Start the Assessment</button>
       </div>
@@ -629,9 +667,10 @@
     document.getElementById('startBtn').addEventListener('click', () => {
       const name = document.getElementById('f-name').value.trim();
       const email = document.getElementById('f-email').value.trim();
+      const practiceType = document.getElementById('f-practice-type').value;
       const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-      if (!name || !emailValid){
+      if (!name || !emailValid || !practiceType){
         document.getElementById('f-err').classList.add('show');
         return;
       }
@@ -641,7 +680,8 @@
         email,
         phone: document.getElementById('f-phone').value.trim(),
         title: document.getElementById('f-title').value.trim(),
-        organization: document.getElementById('f-org').value.trim()
+        organization: document.getElementById('f-org').value.trim(),
+        practiceType
       };
       step = 0;
       render();
@@ -698,6 +738,7 @@
     step = 'results';
     render();
     sendResults();
+    saveSubmission();
   }
 
   function renderResults(){
@@ -748,19 +789,24 @@
     renderStatusLine();
   }
 
+  function statusLineHtml(status, pendingLabel){
+    if (!status){
+      return `<div class="status-line"><span class="status-dot" style="background:#aaa"></span>${pendingLabel}</div>`;
+    }
+    return `
+      <div class="status-line status-${status.level}">
+        <span class="status-dot"></span>${escapeHtml(status.message)}
+      </div>
+    `;
+  }
+
   function renderStatusLine(){
     if (!DEBUG) return;
     const el = document.getElementById('statusLine');
     if (!el) return;
-    if (!sendStatus){
-      el.innerHTML = `<div class="status-line"><span class="status-dot" style="background:#aaa"></span>Sending results...</div>`;
-      return;
-    }
-    el.innerHTML = `
-      <div class="status-line status-${sendStatus.level}">
-        <span class="status-dot"></span>${escapeHtml(sendStatus.message)}
-      </div>
-    `;
+    el.innerHTML =
+      statusLineHtml(sendStatus, 'Sending results...') +
+      statusLineHtml(dbStatus, 'Saving to dashboard...');
   }
 
   /* ============================================================
@@ -946,6 +992,7 @@
       phone: contact.phone || '—',
       title: contact.title || '—',
       organization: contact.organization || '—',
+      practice_type: contact.practiceType || '—',
       overall_score: scores.overall,
       overall_tier: getTier(scores.overall).label,
       booking_link: CONFIG.bookingLink,
@@ -990,6 +1037,63 @@
       const detail = (err && (err.text || err.message)) ? (err.text || err.message) : JSON.stringify(err);
       sendStatus = { level:'red', message:`EmailJS rejected the send: ${detail}` };
       if (DEBUG) console.error('EmailJS send failed:', err);
+    }
+    renderStatusLine();
+  }
+
+  /* ============================================================
+     DASHBOARD BACKEND (Supabase)
+     Saves the same result the emails already carry, so it shows
+     up in dashboard.html — see README.md to configure.
+     ============================================================ */
+  function isDbConfigured(){
+    return !!(CONFIG.supabaseUrl && !CONFIG.supabaseUrl.startsWith('YOUR_') &&
+      CONFIG.supabaseAnonKey && !CONFIG.supabaseAnonKey.startsWith('YOUR_'));
+  }
+
+  async function saveSubmission(){
+    if (!isDbConfigured()){
+      dbStatus = { level:'orange', message:'Data save skipped — the Supabase CONFIG values in index.html are not filled in.' };
+      renderStatusLine();
+      return;
+    }
+
+    const row = {
+      session_slug: SESSION_SLUG,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone || null,
+      title: contact.title || null,
+      organization: contact.organization || null,
+      practice_type: contact.practiceType || null,
+      leadership_score: scores.leadership,
+      operational_score: scores.operational,
+      communication_score: scores.communication,
+      staffing_score: scores.staffing,
+      technology_score: scores.technology,
+      financial_score: scores.financial,
+      overall_score: scores.overall
+    };
+
+    try {
+      const res = await fetch(`${CONFIG.supabaseUrl}/rest/v1/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.supabaseAnonKey,
+          'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row)
+      });
+      if (!res.ok){
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      dbStatus = { level:'green', message:'Saved to your dashboard.' };
+    } catch (err){
+      dbStatus = { level:'red', message:`Dashboard save failed: ${err.message}` };
+      if (DEBUG) console.error('Supabase insert failed:', err);
     }
     renderStatusLine();
   }
