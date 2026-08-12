@@ -19,6 +19,7 @@
     --ink:#1A1F26; --muted:#5A6472; --border:#E7E2D8;
     --gold:#C9A24B; --gold-dark:#A67F34;
     --bench:#0E7FAD; --bench-dark:#1A8FC4;
+    --ember:#C1622E; --ember-light:#F3DCCB; --ember-dark:#8F4720;
     --on-navy:#F4F1E8; --on-navy-muted:#9FADC2; --on-navy-border:#2B3C57;
     --strong:#3FAE5A; --building:#C9A24B; --strained:#E0952F; --critical:#D64545;
     --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', serif;
@@ -133,7 +134,7 @@
   .tooltip .tt-key{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
 
   /* ---------- Light workspace surface (Leads / Sessions / Trends) ---------- */
-  #view-leads, #view-sessions, #view-trends{background:var(--paper);color:var(--ink);}
+  #view-leads, #view-sessions, #view-trends, #view-referrals{background:var(--paper);color:var(--ink);}
   .wksp-wrap{max-width:1180px;margin:0 auto;padding:30px 28px 70px;}
   .wksp-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;}
   .wksp-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--gold-dark);text-transform:uppercase;margin:0 0 6px;}
@@ -202,6 +203,21 @@
   .bench-legend .legend-item{color:var(--muted);}
   .bench-legend .legend-key{border-top-width:3px;}
   .table-wrap{overflow-x:auto;}
+
+  /* Referrals */
+  .funnel-band{background:var(--navy);border-radius:14px;padding:26px 30px;display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-bottom:22px;}
+  .funnel-step{flex:1;min-width:160px;text-align:center;padding:0 14px;}
+  .funnel-step .val{font-size:36px;font-weight:800;color:#fff;line-height:1;}
+  .funnel-step .lbl{font-size:12px;color:var(--on-navy-muted);margin-top:6px;}
+  .funnel-arrow{color:var(--on-navy-border);font-size:22px;padding:0 6px;flex-shrink:0;}
+  .reward-note{display:flex;align-items:center;gap:12px;background:var(--ember-light);border:1px solid #E9C7AE;border-radius:10px;padding:14px 18px;margin-bottom:22px;font-size:13.5px;color:var(--ember-dark);}
+  .reward-note b{color:var(--ink);}
+  .rank-cell{font-family:var(--serif);font-weight:700;font-size:15px;color:var(--muted);width:34px;}
+  .rank-cell.gold{color:#B8860B;}
+  .rank-cell.silver{color:#8C8C96;}
+  .rank-cell.bronze{color:#A9673A;}
+  .lb-bar-track{height:6px;background:var(--border);border-radius:99px;overflow:hidden;width:100px;display:inline-block;vertical-align:middle;margin-right:8px;}
+  .lb-bar-fill{height:100%;background:var(--ember);border-radius:99px;display:block;}
 
   .loading-row{padding:40px;text-align:center;color:var(--on-navy-muted);font-size:13px;}
 </style>
@@ -404,6 +420,7 @@ function renderApp(){
           '<button class="tab-btn" role="tab" data-view="live" aria-selected="false">Live</button>' +
           '<button class="tab-btn" role="tab" data-view="leads" aria-selected="false">Leads (Private)</button>' +
           '<button class="tab-btn" role="tab" data-view="trends" aria-selected="false">Trends</button>' +
+          '<button class="tab-btn" role="tab" data-view="referrals" aria-selected="false">Referrals</button>' +
         '</nav>' +
         '<button class="logout-btn" id="logoutBtn">Log Out</button>' +
       '</div>' +
@@ -411,7 +428,8 @@ function renderApp(){
     '<main id="view-sessions" class="view active"><div class="wksp-wrap" id="sessionsRoot"></div></main>' +
     '<main id="view-live" class="view"><div id="liveRoot"></div></main>' +
     '<main id="view-leads" class="view"><div class="wksp-wrap" id="leadsRoot"></div></main>' +
-    '<main id="view-trends" class="view"><div class="wksp-wrap" id="trendsRoot"></div></main>';
+    '<main id="view-trends" class="view"><div class="wksp-wrap" id="trendsRoot"></div></main>' +
+    '<main id="view-referrals" class="view"><div class="wksp-wrap" id="referralsRoot"></div></main>';
 
   document.getElementById('logoutBtn').addEventListener('click', function(){ sb.auth.signOut(); });
 
@@ -440,6 +458,7 @@ function loadAllData(){
     renderLeadsTab();
     renderTrendsTab();
     renderLiveTab();
+    renderReferralsTab();
   });
 }
 
@@ -878,6 +897,75 @@ function renderLiveContent(el, subs, benchmark){
     item.innerHTML = '<span class="swatch" style="background:' + t.hex + '"></span>' + t.label + ' — ' + pct + '%';
     legend.appendChild(item);
   });
+}
+
+/* ---------------- REFERRALS TAB ---------------- */
+function renderReferralsTab(){
+  var host = document.getElementById('referralsRoot');
+  if (!host) return;
+
+  var all = appState.submissions;
+
+  // Map each referral_code back to the person it belongs to, so a
+  // referred_by value on someone else's row can be shown by name.
+  var byCode = {};
+  all.forEach(function(s){
+    if (s.referral_code) byCode[s.referral_code] = s;
+  });
+
+  var completedViaReferral = all.filter(function(s){ return !!s.referred_by; });
+
+  var countByReferrer = {}; // code -> completion count
+  completedViaReferral.forEach(function(s){
+    countByReferrer[s.referred_by] = (countByReferrer[s.referred_by] || 0) + 1;
+  });
+
+  var leaderboard = Object.keys(countByReferrer).map(function(code){
+    var referrer = byCode[code];
+    return {
+      code: code,
+      name: referrer ? referrer.name : code,
+      organization: referrer ? referrer.organization : '—',
+      completed: countByReferrer[code]
+    };
+  }).sort(function(a,b){ return b.completed - a.completed; });
+
+  var uniqueReferrers = leaderboard.length;
+
+  host.innerHTML =
+    '<p class="wksp-eyebrow">Growth</p>' +
+    '<h1 class="wksp-title" style="margin-bottom:18px;">Referrals</h1>' +
+    '<div class="funnel-band">' +
+      '<div class="funnel-step"><div class="val">' + completedViaReferral.length + '</div><div class="lbl">completions came from a referral</div></div>' +
+      '<div class="funnel-arrow">→</div>' +
+      '<div class="funnel-step"><div class="val">' + uniqueReferrers + '</div><div class="lbl">people have referred at least one person</div></div>' +
+    '</div>' +
+    '<div class="reward-note"><span>🏆</span><span><b>Top 3 referrers</b> get a free 1:1 scorecard walkthrough — reset the leaderboard whenever you want to run a new round (there\'s no automatic reset).</span></div>' +
+    '<div class="card"><div class="table-wrap">' +
+      '<table class="data-table" id="referralsTable">' +
+        '<thead><tr><th></th><th>Referrer</th><th>Organization</th><th>Completions Generated</th></tr></thead>' +
+        '<tbody id="referralsBody"></tbody>' +
+      '</table>' +
+    '</div></div>';
+
+  var body = document.getElementById('referralsBody');
+  if (!leaderboard.length){
+    body.innerHTML = '<tr><td colspan="4" class="empty-cell">No referrals yet — once someone shares their link and it converts, they\'ll show up here.</td></tr>';
+    return;
+  }
+
+  var maxCompleted = leaderboard[0].completed;
+  var rankClasses = ['gold', 'silver', 'bronze'];
+  body.innerHTML = leaderboard.map(function(r, i){
+    var rankClass = rankClasses[i] || '';
+    var barWidth = Math.round(100 * r.completed / maxCompleted);
+    return '<tr>' +
+      '<td class="rank-cell ' + rankClass + '">' + (i+1) + '</td>' +
+      '<td class="name-cell">' + escapeHtml(r.name) + '</td>' +
+      '<td class="muted-cell">' + escapeHtml(r.organization || '—') + '</td>' +
+      '<td><span class="lb-bar-track"><span class="lb-bar-fill" style="width:' + barWidth + '%"></span></span>' + r.completed + '</td>' +
+    '</tr>';
+  }).join('');
 }
 
 /* ============================================================

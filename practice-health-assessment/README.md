@@ -13,8 +13,13 @@ Two files, no build step:
 - **`index.html`** — what attendees take. Runs entirely in the browser; handles
   any number of simultaneous takers.
 - **`dashboard.html`** — private, login-protected. See every response, a live
-  radar/insight view you can project during a talk, and trends across every
-  session you've ever run.
+  radar/insight view you can project during a talk, trends across every
+  session you've ever run, and a referral leaderboard.
+
+Every attendee also gets their own referral link on the results screen
+("refer 3 colleagues, get a free scorecard walkthrough with me") and, once
+enough same-practice-type data exists, a "you scored higher than X% of
+Dental practices" badge.
 
 The only backend is a free [Supabase](https://supabase.com) project (Postgres +
 login) — no server to run yourself.
@@ -47,7 +52,8 @@ projector view.
 
 1. Create a free account at [supabase.com](https://supabase.com) → **New project**.
 2. Open **SQL Editor** → **New query**, paste in the entire contents of
-   `supabase-schema.sql`, and run it. (Safe to re-run if you ever need to.)
+   `supabase-schema.sql`, and run it. (Safe to re-run any time the file changes —
+   it only adds what's missing, never drops data.)
 3. **Project Settings → API** → copy the **Project URL** and the **`anon` `public`
    key**. These are safe to put in client-side code — what actually protects the
    data is the row-level-security policies the SQL just created, not secrecy of
@@ -81,7 +87,21 @@ that's deliberate, so nothing is projectable until you choose to.
 Your own leads (names, emails, phones, full breakdowns) stay on the **Leads**
 tab, which always requires login.
 
-## 4. Test before going live
+## 4. Referrals
+
+No setup needed beyond the schema above — every completed assessment
+automatically gets its own referral link, shown to the attendee with copy /
+LinkedIn / text-share buttons. When someone completes the assessment through
+that link, it's recorded against the original person, and shows up on
+`dashboard.html`'s **Referrals** tab: a leaderboard ranked by completions
+generated, and a running total of how many completions came from a referral.
+
+The current offer shown to attendees is "refer 3, get a free 1:1 scorecard
+walkthrough" for the top 3 referrers — that's copy in `index.html` and
+`dashboard.html`, not an automated system. You're on the hook for actually
+following up; nothing sends a reminder or resets the leaderboard on its own.
+
+## 5. Test before going live
 
 Open `index.html` with `?debug=1` appended to the URL and complete it once.
 The lines under your scores report what happened:
@@ -96,7 +116,7 @@ under `dashboard.html`'s Leads tab.
 Most common EmailJS failure: a template's **To Email** field left blank — it
 must be `{{to_email}}` in both templates.
 
-## 5. Deploy
+## 6. Deploy
 
 Upload `index.html` **and** `dashboard.html` to your web host as
 `public_html/assessment/index.html` and `public_html/assessment/dashboard.html`.

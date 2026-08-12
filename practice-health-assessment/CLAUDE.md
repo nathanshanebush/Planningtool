@@ -66,6 +66,32 @@ Keynote"), created from the Sessions tab in `dashboard.html`. It produces:
 
 Results submitted without a `?session=` param land under the `general` session.
 
+## Referral loop
+
+Every saved submission gets its own `referral_code` (client-generated in
+`saveSubmission()`: `slugify(name)-<4 random chars>`, retried on the rare
+collision). The results screen shows that code as a shareable link —
+`index.html?session=<slug>&ref=<code>` — with copy/LinkedIn/text-share
+buttons. Whoever completes the assessment through that link gets it recorded
+as their `referred_by`. The reward (a free 1:1 scorecard walkthrough for the
+top 3 referrers) is a manual thing Nathan honors himself — there's no
+automated fulfillment, and the dashboard's Referrals tab leaderboard has no
+automatic reset.
+
+`get_peer_percentile` (in `supabase-schema.sql`) also drives the "you scored
+higher than X% of `<practice type>` practices" badge on the results screen —
+it's hidden below a 5-response sample size per practice type so early data
+doesn't produce a misleading 0%/100%.
+
+## Referrals dashboard tab
+
+`renderReferralsTab()` in `dashboard.html` computes everything client-side
+from the same `submissions` fetch the other tabs use — no extra query. It
+only counts what's actually measurable (completions with a `referred_by`,
+grouped back to the referrer's name via their `referral_code`); it does not
+fabricate "invites sent" or "booked calls" numbers, since neither is tracked
+anywhere yet.
+
 ## EmailJS integration
 
 - `CONFIG` keys: `emailPublicKey`, `emailServiceId`, `clientTemplateId`, `ownerTemplateId`,

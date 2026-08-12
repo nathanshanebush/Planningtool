@@ -45,8 +45,17 @@ create table if not exists submissions (
   created_at timestamptz not null default now()
 );
 
+-- Referral loop: every submission gets its own shareable code
+-- (generated client-side, e.g. "jane-k4x9"); referred_by holds the
+-- code of whoever sent them here, if any. Both nullable/plain text —
+-- no foreign key, same reasoning as session_slug above.
+alter table submissions add column if not exists referral_code text;
+alter table submissions add column if not exists referred_by text;
+
 create index if not exists submissions_session_slug_idx on submissions (session_slug);
 create index if not exists submissions_created_at_idx on submissions (created_at);
+create unique index if not exists submissions_referral_code_key on submissions (referral_code) where referral_code is not null;
+create index if not exists submissions_referred_by_idx on submissions (referred_by) where referred_by is not null;
 
 alter table sessions enable row level security;
 alter table submissions enable row level security;
@@ -173,3 +182,35 @@ end;
 $$;
 
 grant execute on function get_global_benchmark() to anon, authenticated;
+
+-- Public, PII-free peer-standing stat for the results screen: "you
+-- scored higher than X% of <practice_type> practices." Only ever
+-- returns a percentile and a sample size — no rows, no names.
+create or replace function get_peer_percentile(p_practice_type text, p_score int)
+returns json
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  result json;
+  total int;
+  lower_count int;
+begin
+  select count(*) into total from submissions where practice_type = p_practice_type;
+  select count(*) into lower_count from submissions where practice_type = p_practice_type and overall_score < p_score;
+
+  if total = 0 then
+    return json_build_object('sample_size', 0, 'percentile', null);
+  end if;
+
+  select json_build_object(
+    'sample_size', total,
+    'percentile', round(100.0 * lower_count / total)
+  ) into result;
+
+  return result;
+end;
+$$;
+
+grant execute on function get_peer_percentile(text, int) to anon, authenticated;

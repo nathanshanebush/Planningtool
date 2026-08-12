@@ -23,6 +23,9 @@
     --orange:#e0952f;
     --red:#d64545;
     --border:#e7e2d8;
+    --ember:#c1622e;
+    --ember-light:#f3dccb;
+    --ember-dark:#8f4720;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -259,6 +262,32 @@
     margin:0 auto 24px;
   }
 
+  .peer-badge{
+    display:flex;align-items:center;gap:14px;
+    background:linear-gradient(135deg, var(--ember-light), #fff 70%);
+    border:1px solid #e9c7ae;border-radius:12px;padding:16px 18px;margin-bottom:22px;
+    display:none;
+  }
+  .peer-badge.show{display:flex;}
+  .peer-badge .pct{font-size:34px;font-weight:800;color:var(--ember-dark);line-height:1;flex-shrink:0;}
+  .peer-badge .txt{font-size:13px;color:var(--ink);line-height:1.45;}
+  .peer-badge .txt b{color:var(--ember-dark);}
+
+  .refer-panel{
+    margin-top:26px;border:1.5px solid var(--ember);border-radius:14px;padding:22px 20px;
+  }
+  .refer-eyebrow{color:var(--ember-dark);font-size:11px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;margin:0 0 8px;}
+  .refer-title{font-size:18px;font-weight:800;color:var(--navy);margin:0 0 8px;line-height:1.35;}
+  .refer-body{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0 0 16px;}
+  .refer-body b{color:var(--ink);}
+  .link-field{display:flex;gap:8px;margin-bottom:12px;}
+  .link-field input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;color:var(--muted);background:var(--paper);}
+  .copy-btn{padding:10px 14px;border:1.5px solid var(--ember);border-radius:8px;background:#fff;color:var(--ember-dark);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .copy-btn:hover{background:var(--ember-light);}
+  .share-row{display:flex;gap:10px;}
+  .share-row button{flex:1;padding:11px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-family:inherit;}
+  .share-row button:hover{border-color:var(--navy);}
+
   .dim-list{margin-bottom:26px;}
   .dim-row{
     display:flex;
@@ -344,6 +373,10 @@
   // per-event from the Sessions tab in dashboard.html; without it, results
   // are grouped under 'general'.
   const SESSION_SLUG = new URLSearchParams(window.location.search).get('session') || 'general';
+
+  // The referral code of whoever sent this person here, if anyone —
+  // carried on their own link (see the "Refer A Colleague" panel below).
+  const REFERRED_BY = new URLSearchParams(window.location.search).get('ref') || null;
 
   /* ============================================================
      DIMENSIONS & QUESTIONS — see CLAUDE.md before editing.
@@ -587,6 +620,8 @@
   let scores = null;
   let sendStatus = null;    // { level:'green'|'orange'|'red', message:string } — email delivery
   let dbStatus = null;      // { level:'green'|'orange'|'red', message:string } — dashboard save
+  let referralCode = null;  // this taker's own shareable code, set once saveSubmission() succeeds
+  let peerStanding = null;  // { percentile, sampleSize } — set once loadPeerStanding() resolves
 
   const app = document.getElementById('app');
 
@@ -756,6 +791,8 @@
           <p class="blurb">${overallTier.blurb}</p>
         </div>
 
+        <div id="peerBadge" class="peer-badge"></div>
+
         <canvas id="radarCanvas" width="320" height="320"></canvas>
 
         <div class="dim-list">
@@ -777,6 +814,8 @@
         <button class="btn btn-gold" id="downloadBtn">Download Your Scorecard (JPEG)</button>
         <a class="btn btn-outline" id="bookBtn" href="${escapeAttr(CONFIG.bookingLink)}" target="_blank" rel="noopener" style="text-decoration:none;display:block;">Talk Through My Scorecard →</a>
 
+        <div id="referPanel" class="refer-panel"></div>
+
         <p class="footer-note">A copy of these results has been sent to ${escapeHtml(contact.email)}.</p>
         <div id="statusLine"></div>
       </div>
@@ -786,7 +825,64 @@
 
     document.getElementById('downloadBtn').addEventListener('click', downloadScorecard);
 
+    renderPeerBadge();
+    renderReferPanel();
     renderStatusLine();
+  }
+
+  function renderPeerBadge(){
+    const el = document.getElementById('peerBadge');
+    if (!el) return;
+    if (!peerStanding || peerStanding.sampleSize < 5 || peerStanding.percentile === null){
+      el.classList.remove('show');
+      el.innerHTML = '';
+      return;
+    }
+    el.classList.add('show');
+    el.innerHTML = `
+      <div class="pct">${peerStanding.percentile}%</div>
+      <div class="txt">You scored higher than <b>${peerStanding.percentile}% of ${escapeHtml(contact.practiceType)} practices</b> in our database — ${peerStanding.sampleSize.toLocaleString()} owners and counting.</div>
+    `;
+  }
+
+  function renderReferPanel(){
+    const el = document.getElementById('referPanel');
+    if (!el) return;
+    const linkReady = !!referralCode;
+    const link = linkReady
+      ? `${location.origin}${location.pathname}?session=${encodeURIComponent(SESSION_SLUG)}&ref=${encodeURIComponent(referralCode)}`
+      : '';
+
+    el.innerHTML = `
+      <p class="refer-eyebrow">Refer A Colleague</p>
+      <p class="refer-title">Know a practice owner who needs to see this?</p>
+      <p class="refer-body">Send them your link. Refer <b>3</b> and I'll walk through your scorecard with you personally — free.</p>
+      <div class="link-field">
+        <input readonly id="referLinkInput" value="${linkReady ? escapeAttr(link) : 'Generating your link…'}">
+        <button class="copy-btn" id="copyReferBtn" ${linkReady ? '' : 'disabled'}>Copy</button>
+      </div>
+      <div class="share-row">
+        <button id="linkedinShareBtn" ${linkReady ? '' : 'disabled'}>Share on LinkedIn</button>
+        <button id="textShareBtn" ${linkReady ? '' : 'disabled'}>Text the Link</button>
+      </div>
+    `;
+
+    if (linkReady){
+      document.getElementById('copyReferBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(link).then(() => {
+          const btn = document.getElementById('copyReferBtn');
+          const orig = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = orig; }, 1400);
+        });
+      });
+      document.getElementById('linkedinShareBtn').addEventListener('click', () => {
+        window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(link), '_blank', 'noopener');
+      });
+      document.getElementById('textShareBtn').addEventListener('click', () => {
+        window.location.href = 'sms:?&body=' + encodeURIComponent('Take the Practice Health Assessment — takes 3 minutes: ' + link);
+      });
+    }
   }
 
   function statusLineHtml(status, pendingLabel){
@@ -1051,12 +1147,23 @@
       CONFIG.supabaseAnonKey && !CONFIG.supabaseAnonKey.startsWith('YOUR_'));
   }
 
-  async function saveSubmission(){
+  function slugifyName(str){
+    const s = String(str).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return s || 'you';
+  }
+  function randomSuffix(){
+    return Math.random().toString(36).slice(2, 6);
+  }
+
+  async function saveSubmission(attemptCode, attemptsLeft){
     if (!isDbConfigured()){
       dbStatus = { level:'orange', message:'Data save skipped — the Supabase CONFIG values in index.html are not filled in.' };
       renderStatusLine();
       return;
     }
+
+    const code = attemptCode || `${slugifyName(contact.name)}-${randomSuffix()}`;
+    const remaining = attemptsLeft === undefined ? 5 : attemptsLeft;
 
     const row = {
       session_slug: SESSION_SLUG,
@@ -1066,6 +1173,8 @@
       title: contact.title || null,
       organization: contact.organization || null,
       practice_type: contact.practiceType || null,
+      referral_code: code,
+      referred_by: REFERRED_BY,
       leadership_score: scores.leadership,
       operational_score: scores.operational,
       communication_score: scores.communication,
@@ -1082,20 +1191,51 @@
           'Content-Type': 'application/json',
           'apikey': CONFIG.supabaseAnonKey,
           'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
-          'Prefer': 'return=minimal'
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify(row)
       });
       if (!res.ok){
         const text = await res.text();
+        // referral_code collision (extremely unlikely, 4-char suffix) — regenerate and retry.
+        if (res.status === 409 && remaining > 0){
+          return saveSubmission(`${slugifyName(contact.name)}-${randomSuffix()}`, remaining - 1);
+        }
         throw new Error(text || `HTTP ${res.status}`);
       }
+      const saved = await res.json();
+      referralCode = (saved && saved[0] && saved[0].referral_code) || code;
       dbStatus = { level:'green', message:'Saved to your dashboard.' };
+      renderReferPanel();
+      loadPeerStanding();
     } catch (err){
       dbStatus = { level:'red', message:`Dashboard save failed: ${err.message}` };
       if (DEBUG) console.error('Supabase insert failed:', err);
     }
     renderStatusLine();
+  }
+
+  async function loadPeerStanding(){
+    if (!isDbConfigured() || !contact.practiceType) return;
+    try {
+      const res = await fetch(`${CONFIG.supabaseUrl}/rest/v1/rpc/get_peer_percentile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.supabaseAnonKey,
+          'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`
+        },
+        body: JSON.stringify({ p_practice_type: contact.practiceType, p_score: scores.overall })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.percentile !== null && data.percentile !== undefined){
+        peerStanding = { percentile: data.percentile, sampleSize: data.sample_size };
+        renderPeerBadge();
+      }
+    } catch (err){
+      if (DEBUG) console.error('Peer percentile lookup failed:', err);
+    }
   }
 
   /* ============================================================
