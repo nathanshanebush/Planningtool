@@ -134,7 +134,7 @@
   .tooltip .tt-key{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
 
   /* ---------- Light workspace surface (Leads / Sessions / Trends) ---------- */
-  #view-leads, #view-sessions, #view-trends, #view-referrals{background:var(--paper);color:var(--ink);}
+  #view-leads, #view-sessions, #view-trends, #view-referrals, #view-speaking{background:var(--paper);color:var(--ink);}
   .wksp-wrap{max-width:1180px;margin:0 auto;padding:30px 28px 70px;}
   .wksp-header{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:22px;}
   .wksp-eyebrow{font-size:11px;font-weight:700;letter-spacing:1.4px;color:var(--gold-dark);text-transform:uppercase;margin:0 0 6px;}
@@ -402,9 +402,20 @@ var appState = {
   leadsSort: { key:'time', dir:-1 },
   leadsExpanded: null,
   leadsSessionFilter: 'all',
+  leadsHotOnly: false,
   trendsRange: 'all',
-  liveSelectedSlug: null
+  liveSelectedSlug: null,
+  speakerInquiries: []
 };
+
+// A "hot" lead: a decision-maker (by title) scoring Critical or Strained
+// overall — worst pain, most authority to actually act on it.
+function isHotLead(l){
+  var t = (l.title || '').toLowerCase();
+  var isDecisionMaker = /owner|manager|director|partner/.test(t);
+  var tier = tierFor(l.overall_score).label;
+  return isDecisionMaker && (tier === 'Critical' || tier === 'Strained');
+}
 
 function dashboardBaseUrl(){
   return window.location.origin + window.location.pathname;
@@ -421,6 +432,7 @@ function renderApp(){
           '<button class="tab-btn" role="tab" data-view="leads" aria-selected="false">Leads (Private)</button>' +
           '<button class="tab-btn" role="tab" data-view="trends" aria-selected="false">Trends</button>' +
           '<button class="tab-btn" role="tab" data-view="referrals" aria-selected="false">Referrals</button>' +
+          '<button class="tab-btn" role="tab" data-view="speaking" aria-selected="false">Speaking</button>' +
         '</nav>' +
         '<button class="logout-btn" id="logoutBtn">Log Out</button>' +
       '</div>' +
@@ -429,7 +441,8 @@ function renderApp(){
     '<main id="view-live" class="view"><div id="liveRoot"></div></main>' +
     '<main id="view-leads" class="view"><div class="wksp-wrap" id="leadsRoot"></div></main>' +
     '<main id="view-trends" class="view"><div class="wksp-wrap" id="trendsRoot"></div></main>' +
-    '<main id="view-referrals" class="view"><div class="wksp-wrap" id="referralsRoot"></div></main>';
+    '<main id="view-referrals" class="view"><div class="wksp-wrap" id="referralsRoot"></div></main>' +
+    '<main id="view-speaking" class="view"><div class="wksp-wrap" id="speakingRoot"></div></main>';
 
   document.getElementById('logoutBtn').addEventListener('click', function(){ sb.auth.signOut(); });
 
@@ -447,11 +460,13 @@ function renderApp(){
 function loadAllData(){
   Promise.all([
     sb.from('sessions').select('*').order('created_at', { ascending:false }),
-    sb.from('submissions').select('*').order('created_at', { ascending:false })
+    sb.from('submissions').select('*').order('created_at', { ascending:false }),
+    sb.from('speaker_inquiries').select('*').order('created_at', { ascending:false })
   ]).then(function(results){
-    var sessionsRes = results[0], submissionsRes = results[1];
+    var sessionsRes = results[0], submissionsRes = results[1], inquiriesRes = results[2];
     appState.sessions = sessionsRes.data || [];
     appState.submissions = submissionsRes.data || [];
+    appState.speakerInquiries = inquiriesRes.data || [];
     var sub = document.getElementById('brandSub');
     if (sub) sub.textContent = appState.submissions.length + ' responses across ' + appState.sessions.length + ' sessions';
     renderSessionsTab();
@@ -459,6 +474,7 @@ function loadAllData(){
     renderTrendsTab();
     renderLiveTab();
     renderReferralsTab();
+    renderSpeakingTab();
   });
 }
 
@@ -568,6 +584,8 @@ function renderLeadsTab(){
     '<div class="toolbar">' +
       '<input class="search-input" placeholder="Search name, email, organization…" id="leadSearch">' +
       '<select class="select-input" id="sessionFilter">' + sessionOptions + '</select>' +
+      '<label class="toggle"><input type="checkbox" id="hotOnlyToggle">🔥 Hot leads only</label>' +
+      '<button class="copy-btn" id="exportCsvBtn" style="margin-left:auto;">Export CSV</button>' +
     '</div>' +
     '<div class="card"><div class="table-wrap">' +
       '<table class="data-table" id="leadsTable"><thead><tr>' +
@@ -586,6 +604,12 @@ function renderLeadsTab(){
     renderLeadsBody();
   });
   document.getElementById('leadSearch').addEventListener('input', renderLeadsBody);
+  document.getElementById('hotOnlyToggle').checked = appState.leadsHotOnly;
+  document.getElementById('hotOnlyToggle').addEventListener('change', function(e){
+    appState.leadsHotOnly = e.target.checked;
+    renderLeadsBody();
+  });
+  document.getElementById('exportCsvBtn').addEventListener('click', exportLeadsCsv);
   document.querySelectorAll('#leadsTable th').forEach(function(th){
     th.addEventListener('click', function(){
       var key = th.dataset.key;
@@ -608,6 +632,7 @@ function renderLeadsBody(){
 
   var rows = appState.submissions.filter(function(s){
     if (sessFilter !== 'all' && s.session_slug !== sessFilter) return false;
+    if (appState.leadsHotOnly && !isHotLead(s)) return false;
     if (!query) return true;
     var hay = (s.name + ' ' + s.email + ' ' + (s.organization||'') + ' ' + (s.practice_type||'')).toLowerCase();
     return hay.indexOf(query) > -1;
@@ -635,12 +660,12 @@ function renderLeadsBody(){
     var tr = document.createElement('tr');
     tr.className = 'clickable';
     tr.innerHTML =
-      '<td class="name-cell">' + escapeHtml(l.name) + (l.title ? '<div class="muted-cell">' + escapeHtml(l.title) + '</div>' : '') + '</td>' +
+      '<td class="name-cell">' + (isHotLead(l) ? '<span title="Hot lead — decision-maker, Critical/Strained score">🔥</span> ' : '') + escapeHtml(l.name) + (l.title ? '<div class="muted-cell">' + escapeHtml(l.title) + '</div>' : '') + '</td>' +
       '<td>' + escapeHtml(l.practice_type || '—') + '</td>' +
       '<td>' + escapeHtml(l.organization || '—') + '</td>' +
       '<td><div>' + escapeHtml(l.email) + '</div>' + (l.phone ? '<div class="muted-cell">' + escapeHtml(l.phone) + '</div>' : '') + '</td>' +
       '<td><span class="tier-pill" style="background:' + tier.hex + '22;color:' + tier.hex + '"><span class="dot" style="background:' + tier.hex + '"></span>' + l.overall_score + ' — ' + tier.label + '</span></td>' +
-      '<td class="muted-cell">' + time + '</td>';
+      '<td class="muted-cell">' + time + (l.booking_clicked ? '<div style="color:var(--ember-dark);font-weight:700;">Clicked to book</div>' : '') + '</td>';
     tr.addEventListener('click', function(){
       appState.leadsExpanded = appState.leadsExpanded === l.id ? null : l.id;
       renderLeadsBody();
@@ -672,6 +697,47 @@ function renderLeadsBody(){
   });
 }
 
+function csvEscape(v){
+  v = v == null ? '' : String(v);
+  if (/[",\n]/.test(v)) v = '"' + v.replace(/"/g, '""') + '"';
+  return v;
+}
+
+function exportLeadsCsv(){
+  var query = document.getElementById('leadSearch').value.toLowerCase();
+  var sessFilter = appState.leadsSessionFilter;
+  var rows = appState.submissions.filter(function(s){
+    if (sessFilter !== 'all' && s.session_slug !== sessFilter) return false;
+    if (appState.leadsHotOnly && !isHotLead(s)) return false;
+    if (!query) return true;
+    var hay = (s.name + ' ' + s.email + ' ' + (s.organization||'') + ' ' + (s.practice_type||'')).toLowerCase();
+    return hay.indexOf(query) > -1;
+  });
+
+  var headers = ['Name','Title','Practice Type','Organization','Email','Phone','Overall Score','Tier',
+    'Leadership','Operational','Communication','Staffing','Technology & AI','Financial',
+    'Session','Submitted','Clicked To Book','Hot Lead'];
+  var lines = [headers.map(csvEscape).join(',')];
+  rows.forEach(function(l){
+    lines.push([
+      l.name, l.title, l.practice_type, l.organization, l.email, l.phone,
+      l.overall_score, tierFor(l.overall_score).label,
+      l.leadership_score, l.operational_score, l.communication_score, l.staffing_score, l.technology_score, l.financial_score,
+      l.session_slug, l.created_at, l.booking_clicked ? 'Yes' : 'No', isHotLead(l) ? 'Yes' : 'No'
+    ].map(csvEscape).join(','));
+  });
+
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'leads-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 /* ---------------- TRENDS TAB ---------------- */
 function filterByRange(subs, range){
   if (range === 'all') return subs;
@@ -695,6 +761,36 @@ function avgDims(subs){
   return out;
 }
 
+function computeStorylines(sessionSeries, all){
+  var lines = [];
+  if (sessionSeries.length >= 2){
+    var counts = {};
+    sessionSeries.forEach(function(s){
+      var weakest = DIMENSIONS.slice().sort(function(a,b){ return s.dims[a.key]-s.dims[b.key]; })[0];
+      counts[weakest.key] = (counts[weakest.key]||0) + 1;
+    });
+    var topKey = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; })[0];
+    var topDim = DIMENSIONS.find(function(d){ return d.key === topKey; });
+    lines.push(escapeHtml(topDim.label) + ' has been the weakest dimension in ' + counts[topKey] + ' of your last ' + sessionSeries.length + ' sessions.');
+  }
+  if (sessionSeries.length >= 4){
+    var mid = Math.floor(sessionSeries.length/2);
+    var firstHalf = sessionSeries.slice(0, mid);
+    var secondHalf = sessionSeries.slice(mid);
+    var firstAvg = firstHalf.reduce(function(a,s){return a+s.avg;},0) / firstHalf.length;
+    var secondAvg = secondHalf.reduce(function(a,s){return a+s.avg;},0) / secondHalf.length;
+    var diff = Math.round(secondAvg - firstAvg);
+    if (diff !== 0){
+      lines.push('Overall scores are trending ' + (diff > 0 ? 'up' : 'down') + ' — your more recent sessions average ' + Math.abs(diff) + ' point' + (Math.abs(diff)===1?'':'s') + ' ' + (diff > 0 ? 'higher' : 'lower') + ' than your earlier ones.');
+    }
+  }
+  var criticalCount = all.filter(function(s){ return tierFor(s.overall_score).label === 'Critical'; }).length;
+  if (all.length >= 5 && criticalCount > 0){
+    lines.push(Math.round(100*criticalCount/all.length) + '% of everyone assessed so far is Critical overall — that\'s ' + criticalCount + ' practice' + (criticalCount===1?'':'s') + ' one step from real trouble.');
+  }
+  return lines;
+}
+
 function renderTrendsTab(){
   var host = document.getElementById('trendsRoot');
   if (!host) return;
@@ -705,6 +801,18 @@ function renderTrendsTab(){
   var selectedDims = avgDims(selected);
   var allTimeOverall = all.length ? Math.round(all.reduce(function(a,s){return a+s.overall_score;},0)/all.length) : 0;
   var sessionCount = new Set(all.map(function(s){ return s.session_slug; })).size;
+  var bookingClickCount = all.filter(function(s){ return s.booking_clicked; }).length;
+
+  // One point per session, in creation order, with that session's
+  // average overall score AND average per-dimension scores — feeds
+  // both the sparkline and the storylines below.
+  var sessionSeries = appState.sessions.slice().sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); }).map(function(s){
+    var subs = all.filter(function(x){ return x.session_slug === s.slug; });
+    var avg = subs.length ? Math.round(subs.reduce(function(a,x){return a+x.overall_score;},0)/subs.length) : null;
+    return { name: s.name, date: new Date(s.created_at).toLocaleDateString(undefined,{month:'short',year:'numeric'}), avg: avg, responses: subs.length, dims: avgDims(subs) };
+  }).filter(function(s){ return s.avg !== null; });
+
+  var storylines = computeStorylines(sessionSeries, all);
 
   host.innerHTML =
     '<p class="wksp-eyebrow">All Sessions</p>' +
@@ -715,7 +823,13 @@ function renderTrendsTab(){
       '<div class="hero-figure"><div class="val">' + sessionCount + '</div><div class="lbl">sessions run</div></div>' +
       '<div class="hero-divider"></div>' +
       '<div class="hero-figure"><div class="val">' + allTimeOverall + '</div><div class="lbl">all-time average score</div></div>' +
+      '<div class="hero-divider"></div>' +
+      '<div class="hero-figure"><div class="val">' + bookingClickCount.toLocaleString() + '</div><div class="lbl">clicked to book a call</div></div>' +
     '</div>' +
+    (storylines.length ? '<div class="reward-note" style="background:var(--paper-2);border-color:var(--border);color:var(--ink);display:block;">' +
+      '<div style="font-weight:700;color:var(--gold-dark);font-size:11px;letter-spacing:0.6px;text-transform:uppercase;margin-bottom:8px;">Storylines</div>' +
+      storylines.map(function(l){ return '<div style="margin-bottom:4px;">' + l + '</div>'; }).join('') +
+    '</div>' : '') +
     '<div class="filter-row" id="trendsFilterRow">' +
       '<button class="pill-btn" data-range="day">Today</button>' +
       '<button class="pill-btn" data-range="week">This Week</button>' +
@@ -749,15 +863,6 @@ function renderTrendsTab(){
   });
 
   buildBar(document.getElementById('barHost'), selectedDims, allTimeDims);
-
-  // Sparkline: one point per session, in creation order, using that
-  // session's submissions' average overall score.
-  var sessionSeries = appState.sessions.slice().sort(function(a,b){ return new Date(a.created_at) - new Date(b.created_at); }).map(function(s){
-    var subs = all.filter(function(x){ return x.session_slug === s.slug; });
-    var avg = subs.length ? Math.round(subs.reduce(function(a,x){return a+x.overall_score;},0)/subs.length) : null;
-    return { name: s.name, date: new Date(s.created_at).toLocaleDateString(undefined,{month:'short',year:'numeric'}), avg: avg, responses: subs.length };
-  }).filter(function(s){ return s.avg !== null; });
-
   buildSpark(document.getElementById('sparkHost'), sessionSeries);
 
   var summaryBody = document.getElementById('sessionsSummaryBody');
@@ -966,6 +1071,66 @@ function renderReferralsTab(){
       '<td><span class="lb-bar-track"><span class="lb-bar-fill" style="width:' + barWidth + '%"></span></span>' + r.completed + '</td>' +
     '</tr>';
   }).join('');
+}
+
+/* ---------------- SPEAKING TAB ---------------- */
+var speakingExpanded = null;
+function renderSpeakingTab(){
+  var host = document.getElementById('speakingRoot');
+  if (!host) return;
+
+  var inquiries = appState.speakerInquiries;
+
+  host.innerHTML =
+    '<div class="wksp-header">' +
+      '<div><p class="wksp-eyebrow">Leads</p><h1 class="wksp-title">Speaking Inquiries</h1></div>' +
+      '<span class="status-chip">Private — event organizers, not attendees</span>' +
+    '</div>' +
+    '<div class="card"><div class="table-wrap">' +
+      '<table class="data-table" id="speakingTable"><thead><tr>' +
+        '<th>Contact</th><th>Event</th><th>Date</th><th>Audience</th><th>Submitted</th>' +
+      '</tr></thead><tbody id="speakingBody"></tbody></table>' +
+    '</div></div>';
+
+  var body = document.getElementById('speakingBody');
+  if (!inquiries.length){
+    body.innerHTML = '<tr><td colspan="5" class="empty-cell">No speaking inquiries yet. Share your speaking page link to start collecting them.</td></tr>';
+    return;
+  }
+
+  body.innerHTML = '';
+  inquiries.forEach(function(q){
+    var submitted = new Date(q.created_at).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' });
+    var eventDate = q.event_date ? new Date(q.event_date + 'T00:00:00').toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) : '—';
+    var tr = document.createElement('tr');
+    tr.className = 'clickable';
+    tr.innerHTML =
+      '<td class="name-cell">' + escapeHtml(q.contact_name) + '<div class="muted-cell">' + escapeHtml(q.email) + '</div></td>' +
+      '<td>' + escapeHtml(q.event_name || '—') + '<div class="muted-cell">' + escapeHtml(q.organization || '') + '</div></td>' +
+      '<td class="muted-cell">' + eventDate + '</td>' +
+      '<td class="muted-cell">' + escapeHtml(q.audience_size || '—') + '</td>' +
+      '<td class="muted-cell">' + submitted + '</td>';
+    tr.addEventListener('click', function(){
+      speakingExpanded = speakingExpanded === q.id ? null : q.id;
+      renderSpeakingTab();
+    });
+    if (speakingExpanded === q.id) tr.classList.add('expanded');
+    body.appendChild(tr);
+
+    if (speakingExpanded === q.id){
+      var dtr = document.createElement('tr');
+      dtr.className = 'detail-row';
+      var td = document.createElement('td');
+      td.colSpan = 5;
+      td.style.padding = '18px 22px 22px';
+      td.innerHTML =
+        '<div style="font-size:13px;color:var(--muted);margin-bottom:10px;"><b style="color:var(--ink);">Budget range:</b> ' + escapeHtml(q.budget_range || 'Not specified') + '</div>' +
+        '<div style="font-size:13.5px;color:var(--ink);line-height:1.6;white-space:pre-wrap;">' + escapeHtml(q.message || 'No message included.') + '</div>' +
+        '<a href="mailto:' + escapeHtml(q.email) + '" style="display:inline-block;margin-top:14px;padding:9px 16px;background:var(--navy);color:#fff;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;">Reply to ' + escapeHtml(q.contact_name) + '</a>';
+      dtr.appendChild(td);
+      body.appendChild(dtr);
+    }
+  });
 }
 
 /* ============================================================

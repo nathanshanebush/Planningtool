@@ -52,13 +52,38 @@ create table if not exists submissions (
 alter table submissions add column if not exists referral_code text;
 alter table submissions add column if not exists referred_by text;
 
+-- Booking-link click tracking: set by the attendee's own browser the
+-- moment they click "Talk Through My Scorecard" (fire-and-forget, does
+-- not block the navigation). Column-level grants below mean an anon
+-- request can only ever flip these two columns, nothing else.
+alter table submissions add column if not exists booking_clicked boolean not null default false;
+alter table submissions add column if not exists booking_clicked_at timestamptz;
+
 create index if not exists submissions_session_slug_idx on submissions (session_slug);
 create index if not exists submissions_created_at_idx on submissions (created_at);
 create unique index if not exists submissions_referral_code_key on submissions (referral_code) where referral_code is not null;
 create index if not exists submissions_referred_by_idx on submissions (referred_by) where referred_by is not null;
 
+-- One row per "book Nathan to speak" inquiry — a separate lead type
+-- from practice-owner submissions (event organizers, not attendees).
+create table if not exists speaker_inquiries (
+  id uuid primary key default gen_random_uuid(),
+  contact_name text not null,
+  email text not null,
+  organization text,
+  event_name text,
+  event_date date,
+  audience_size text,
+  budget_range text,
+  message text,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists speaker_inquiries_created_at_idx on speaker_inquiries (created_at);
+
 alter table sessions enable row level security;
 alter table submissions enable row level security;
+alter table speaker_inquiries enable row level security;
 
 drop policy if exists "public sessions are readable" on sessions;
 drop policy if exists "authenticated full access to sessions" on sessions;
@@ -66,6 +91,11 @@ drop policy if exists "anyone can submit a result" on submissions;
 drop policy if exists "authenticated can read submissions" on submissions;
 drop policy if exists "authenticated can manage submissions" on submissions;
 drop policy if exists "authenticated can delete submissions" on submissions;
+drop policy if exists "anyone can flag their own booking click" on submissions;
+drop policy if exists "anyone can submit a speaker inquiry" on speaker_inquiries;
+drop policy if exists "authenticated can read speaker inquiries" on speaker_inquiries;
+drop policy if exists "authenticated can manage speaker inquiries" on speaker_inquiries;
+drop policy if exists "authenticated can delete speaker inquiries" on speaker_inquiries;
 
 -- SESSIONS
 -- Anyone can see a session marked public — this is only ever the
@@ -92,6 +122,27 @@ create policy "authenticated can manage submissions" on submissions
   for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
 
 create policy "authenticated can delete submissions" on submissions
+  for delete using (auth.role() = 'authenticated');
+
+-- Anyone can update a row to flag their own booking-link click — the
+-- column-level grant below is what actually keeps this narrow (they
+-- can flip booking_clicked/booking_clicked_at, nothing else).
+create policy "anyone can flag their own booking click" on submissions
+  for update using (true) with check (true);
+
+-- SPEAKER INQUIRIES
+-- Anyone can submit an inquiry (an event organizer filling out the
+-- speaking page). Nobody anonymous can read one back.
+create policy "anyone can submit a speaker inquiry" on speaker_inquiries
+  for insert with check (true);
+
+create policy "authenticated can read speaker inquiries" on speaker_inquiries
+  for select using (auth.role() = 'authenticated');
+
+create policy "authenticated can manage speaker inquiries" on speaker_inquiries
+  for update using (auth.role() = 'authenticated') with check (auth.role() = 'authenticated');
+
+create policy "authenticated can delete speaker inquiries" on speaker_inquiries
   for delete using (auth.role() = 'authenticated');
 
 -- Public, PII-free aggregate for the projector/Live screen. This is
@@ -147,6 +198,13 @@ grant select on sessions to anon;
 grant insert on submissions to anon, authenticated;
 grant select, update, delete on submissions to authenticated;
 grant all on sessions to authenticated;
+
+-- Narrow, column-level grant: an anon request can UPDATE a submissions
+-- row, but only ever touch these two columns — the booking-click flag.
+grant update (booking_clicked, booking_clicked_at) on submissions to anon;
+
+grant insert on speaker_inquiries to anon, authenticated;
+grant select, update, delete on speaker_inquiries to authenticated;
 
 -- Public, PII-free "brag stat" — cumulative numbers across every session
 -- ever run, regardless of is_public. This is the proprietary-dataset

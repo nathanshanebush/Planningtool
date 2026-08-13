@@ -8,13 +8,16 @@ by email. A lead-alert email is sent to Nathan for every completion.
 Six dimensions scored: Leadership, Operational, Communication, Staffing,
 Technology & AI, Financial.
 
-Two files, no build step:
+Three files, no build step:
 
 - **`index.html`** — what attendees take. Runs entirely in the browser; handles
   any number of simultaneous takers.
-- **`dashboard.html`** — private, login-protected. See every response, a live
-  radar/insight view you can project during a talk, trends across every
-  session you've ever run, and a referral leaderboard.
+- **`dashboard.html`** — private, login-protected. Sessions, Live (projector
+  view), Leads (with hot-lead flagging and CSV export), Trends (with
+  auto-surfaced storylines), Referrals, and Speaking Inquiries.
+- **`speak.html`** — a public "book me to speak" lead form for event
+  organizers. Not linked from anywhere in the app — you share its URL
+  yourself (site nav, bio link, wherever makes sense).
 
 Every attendee also gets their own referral link on the results screen
 ("refer 3 colleagues, get a free scorecard walkthrough with me") and, once
@@ -47,8 +50,8 @@ Fill those four values into `CONFIG` near the top of `index.html`'s `<script>` b
 
 ## 2. Set up the backend (Supabase)
 
-This is what powers `dashboard.html` — logins, saved results, sessions, the live
-projector view.
+This is what powers `dashboard.html` and `speak.html` — logins, saved results,
+sessions, referrals, speaking inquiries, the live projector view.
 
 1. Create a free account at [supabase.com](https://supabase.com) → **New project**.
 2. Open **SQL Editor** → **New query**, paste in the entire contents of
@@ -58,8 +61,9 @@ projector view.
    key**. These are safe to put in client-side code — what actually protects the
    data is the row-level-security policies the SQL just created, not secrecy of
    this key.
-4. Paste both values into `CONFIG` near the top of **both** `index.html`'s and
-   `dashboard.html`'s `<script>` blocks (`supabaseUrl` and `supabaseAnonKey`).
+4. Paste both values into `CONFIG` near the top of **all three** files' `<script>`
+   blocks (`supabaseUrl` and `supabaseAnonKey`) — `index.html`, `dashboard.html`,
+   and `speak.html`.
 5. **Authentication → Users → Add user** — create your own login (your email +
    a password you choose). This is the only account that can ever log into
    `dashboard.html`. There is no public sign-up.
@@ -87,7 +91,22 @@ that's deliberate, so nothing is projectable until you choose to.
 Your own leads (names, emails, phones, full breakdowns) stay on the **Leads**
 tab, which always requires login.
 
-## 4. Referrals
+## 4. Working your leads
+
+The **Leads** tab now does more than list people:
+
+- **🔥 Hot lead flag** — anyone whose title reads like a decision-maker
+  (owner/manager/director/partner) and scored Critical or Strained overall
+  gets flagged automatically. Check "Hot leads only" to filter to just them —
+  that's your best buyer with the worst pain, in one view.
+- **Export CSV** — exports whatever the current search/session/hot-only
+  filters show, ready to import into whatever you actually run your pipeline
+  in.
+- Anyone who clicked "Talk Through My Scorecard" on their results screen
+  shows a **"Clicked to book"** note under their submitted time — a real
+  click signal, not a guess.
+
+## 5. Referrals
 
 No setup needed beyond the schema above — every completed assessment
 automatically gets its own referral link, shown to the attendee with copy /
@@ -101,7 +120,23 @@ walkthrough" for the top 3 referrers — that's copy in `index.html` and
 `dashboard.html`, not an automated system. You're on the hook for actually
 following up; nothing sends a reminder or resets the leaderboard on its own.
 
-## 5. Test before going live
+## 6. Trends & storylines
+
+The **Trends** tab now auto-surfaces a couple of plain-language observations
+above the charts once there's enough data — which dimension has been
+weakest most often, whether recent sessions are trending up or down, what
+share of everyone assessed is sitting at Critical. These are meant to be
+copy-and-paste-able into a LinkedIn post or the next talk, not just dashboard
+decoration.
+
+## 7. Speaking inquiries
+
+`speak.html` is a standalone page — put its URL wherever makes sense
+(nathanbushmba.com nav, your speaker one-sheet, your LinkedIn bio, a QR code
+on the live screen). Submissions show up on `dashboard.html`'s **Speaking**
+tab, separate from practice-owner leads, with a one-click mailto reply link.
+
+## 8. Test before going live
 
 Open `index.html` with `?debug=1` appended to the URL and complete it once.
 The lines under your scores report what happened:
@@ -110,18 +145,21 @@ The lines under your scores report what happened:
 - **orange** — skipped; the relevant `CONFIG` values aren't all filled in.
 - **red** — rejected; the message tells you why.
 
+`speak.html?debug=1` reports the same way for a test inquiry submission.
+
 Cross-check emails in EmailJS → Email History, and check the response shows up
 under `dashboard.html`'s Leads tab.
 
 Most common EmailJS failure: a template's **To Email** field left blank — it
 must be `{{to_email}}` in both templates.
 
-## 6. Deploy
+## 9. Deploy
 
-Upload `index.html` **and** `dashboard.html` to your web host as
-`public_html/assessment/index.html` and `public_html/assessment/dashboard.html`.
-They're then live at `nathanbushmba.com/assessment` and
-`nathanbushmba.com/assessment/dashboard.html`.
+Upload `index.html`, `dashboard.html`, **and** `speak.html` to your web host as
+`public_html/assessment/index.html`, `.../dashboard.html`, and `.../speak.html`.
+They're then live at `nathanbushmba.com/assessment`,
+`nathanbushmba.com/assessment/dashboard.html`, and
+`nathanbushmba.com/assessment/speak.html`.
 
 ## Notes
 
@@ -136,3 +174,10 @@ They're then live at `nathanbushmba.com/assessment` and
   changing who can read/write what.
 - **Editing the assessment:** see `CLAUDE.md` for the scoring rules — keep
   exactly 5 questions per dimension.
+- **Not built (on purpose, for now):** automated multi-email nurture sequences
+  (needs a scheduling mechanism this static-site architecture doesn't have),
+  real calendar-booking confirmation tracking (only the link click is
+  tracked, not an actual booking), CRM integration (needs to know which CRM),
+  and a public "state of the industry" report (needs more data volume first).
+  All straightforward to add later — flagging them so it's clear they're
+  scoped out, not forgotten.

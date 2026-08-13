@@ -10,10 +10,13 @@ not apply Snapscale branding, colors, or voice here.
 ## Architecture
 
 - Static front end, no build step, no framework, no bundler, no `package.json`.
-- Two HTML files, each self-contained (HTML + CSS + vanilla JS inline):
+- Three HTML files, each self-contained (HTML + CSS + vanilla JS inline):
   - `index.html` — the attendee-facing assessment.
   - `dashboard.html` — the presenter's private tool (login, sessions, leads, trends,
-    and the live projector view).
+    referrals, speaking inquiries, and the live projector view).
+  - `speak.html` — public, unauthenticated "book Nathan to speak" lead form for
+    event organizers. Not linked from `index.html`/`dashboard.html` — share its
+    URL directly (site nav, bio links, the live screen, etc.).
 - The only backend is Supabase (Postgres + auth), reached via `fetch`/`supabase-js`
   straight from the browser — no server you run or maintain. Schema + RLS policies
   live in `supabase-schema.sql`.
@@ -27,8 +30,11 @@ not apply Snapscale branding, colors, or voice here.
   what you edit to go live (EmailJS + Supabase values).
 - `dashboard.html` — presenter dashboard. Its own `CONFIG` (Supabase URL/key +
   `assessmentUrl`) near the top of its `<script>` block.
-- `supabase-schema.sql` — run once in the Supabase SQL Editor. Creates `sessions`
-  and `submissions`, RLS policies, and two PII-free aggregate functions.
+- `speak.html` — the speaking-inquiry form. Same `CONFIG` shape (`supabaseUrl`,
+  `supabaseAnonKey`) as the other two, pointed at the same project.
+- `supabase-schema.sql` — run once in the Supabase SQL Editor (safe to re-run any
+  time it changes). Creates `sessions`, `submissions`, `speaker_inquiries`, RLS
+  policies, and the PII-free aggregate/percentile functions.
 - `templates/client-scorecard-email.html` — EmailJS template sent to the attendee.
 - `templates/owner-lead-alert-email.html` — EmailJS template sent to Nathan.
 
@@ -92,6 +98,47 @@ grouped back to the referrer's name via their `referral_code`); it does not
 fabricate "invites sent" or "booked calls" numbers, since neither is tracked
 anywhere yet.
 
+## Booking-click tracking
+
+`flagBookingClick()` in `index.html` fires a fire-and-forget PATCH the moment
+someone clicks "Talk Through My Scorecard" — it never blocks or delays the
+link's own navigation. It sets `booking_clicked` / `booking_clicked_at` on
+that person's own row, using their `id` (captured from the insert response
+alongside `referral_code`). RLS + a column-level grant mean an anon request
+can only ever touch those two columns, on any row — that's an accepted,
+low-impact tradeoff (the data isn't sensitive) to avoid needing auth just to
+flag a click. If you ever add real calendar-booking confirmation tracking
+(vs. just the click), this is the column pair to extend.
+
+## Lead tools (dashboard.html, Leads tab)
+
+- **Hot-lead flag** (`isHotLead()`): a decision-maker title (owner/manager/
+  director/partner, matched loosely) scoring Critical or Strained overall.
+  Shown as 🔥 next to the name; "Hot leads only" toggle filters the table.
+  Adjust the title regex or tier condition in one place if the definition
+  needs to change.
+- **CSV export** (`exportLeadsCsv()`): exports whatever the search/session/
+  hot-only filters currently show, client-side (Blob + anchor download), no
+  backend involved.
+
+## Storylines (dashboard.html, Trends tab)
+
+`computeStorylines()` auto-surfaces plain-language observations from the
+same session/submission data already on the page — e.g. which dimension has
+been weakest most often, whether recent sessions are trending up or down.
+Thresholds (`sessionSeries.length >= 2` / `>= 4`, `all.length >= 5`) exist so
+it doesn't say something confident off 1-2 data points; adjust them if that
+feels too conservative or too loose as real data comes in.
+
+## Speaking inquiries
+
+`speak.html` is a separate lead type from practice-owner submissions —
+event organizers, not attendees — insert-only for anon, same as
+`submissions`. Reviewed from `dashboard.html`'s **Speaking** tab (expandable
+rows, mailto reply link). Not yet linked from anywhere in the app on
+purpose; decide where you want to point people at it (site nav, LinkedIn
+bio, the live screen) and it'll show up here once they submit.
+
 ## EmailJS integration
 
 - `CONFIG` keys: `emailPublicKey`, `emailServiceId`, `clientTemplateId`, `ownerTemplateId`,
@@ -133,7 +180,8 @@ anywhere yet.
 ## Deploy
 
 Any static host. Production target: WordPress at `nathanbushmba.com/assessment`,
-uploaded as `public_html/assessment/index.html` and `public_html/assessment/dashboard.html`.
+uploaded as `public_html/assessment/index.html`, `.../dashboard.html`, and
+`.../speak.html`.
 
 ## Conventions / guardrails
 

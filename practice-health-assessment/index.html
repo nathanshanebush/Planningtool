@@ -622,6 +622,7 @@
   let dbStatus = null;      // { level:'green'|'orange'|'red', message:string } — dashboard save
   let referralCode = null;  // this taker's own shareable code, set once saveSubmission() succeeds
   let peerStanding = null;  // { percentile, sampleSize } — set once loadPeerStanding() resolves
+  let submissionId = null;  // this taker's own row id, set once saveSubmission() succeeds — used only to flag a booking-link click
 
   const app = document.getElementById('app');
 
@@ -696,6 +697,7 @@
         </div>
 
         <button class="btn btn-gold" id="startBtn">Start the Assessment</button>
+        <p class="footer-note" style="margin-top:14px;">We'll email you your results and may follow up about them. We never sell your data.</p>
       </div>
     `;
 
@@ -824,6 +826,7 @@
     drawRadarCanvas(document.getElementById('radarCanvas'), scores);
 
     document.getElementById('downloadBtn').addEventListener('click', downloadScorecard);
+    document.getElementById('bookBtn').addEventListener('click', flagBookingClick);
 
     renderPeerBadge();
     renderReferPanel();
@@ -1205,6 +1208,7 @@
       }
       const saved = await res.json();
       referralCode = (saved && saved[0] && saved[0].referral_code) || code;
+      submissionId = saved && saved[0] && saved[0].id;
       dbStatus = { level:'green', message:'Saved to your dashboard.' };
       renderReferPanel();
       loadPeerStanding();
@@ -1236,6 +1240,24 @@
     } catch (err){
       if (DEBUG) console.error('Peer percentile lookup failed:', err);
     }
+  }
+
+  let bookingClickFlagged = false;
+  function flagBookingClick(){
+    // Fire-and-forget: the link's own href already handles navigation,
+    // this just records the click. Never blocks or delays the click.
+    if (bookingClickFlagged || !isDbConfigured() || !submissionId) return;
+    bookingClickFlagged = true;
+    fetch(`${CONFIG.supabaseUrl}/rest/v1/submissions?id=eq.${submissionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': CONFIG.supabaseAnonKey,
+        'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ booking_clicked: true, booking_clicked_at: new Date().toISOString() })
+    }).catch(err => { if (DEBUG) console.error('Booking-click flag failed:', err); });
   }
 
   /* ============================================================
