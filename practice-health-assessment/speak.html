@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Nathan Bush to Speak</title>
+<meta name="description" content="Bring the Practice Health framework — and its live, proprietary data — to your stage.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0f1b2d;
+    --navy-light:#16283f;
+    --ink:#1a1f26;
+    --muted:#5a6472;
+    --paper:#f7f5f1;
+    --card:#ffffff;
+    --gold:#c9a24b;
+    --gold-light:#e9d9ae;
+    --green:#3fae5a;
+    --orange:#e0952f;
+    --red:#d64545;
+    --border:#e7e2d8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px 48px;
+  }
+  .card{
+    width:100%;
+    max-width:560px;
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 8px 30px rgba(15,27,45,0.08);
+    padding:36px 28px;
+    animation:fadeIn 0.35s ease;
+  }
+  @keyframes fadeIn{ from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important;transition:none !important;} }
+
+  .eyebrow{color:var(--gold);font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 8px;}
+  h1{font-size:25px;font-weight:800;color:var(--navy);margin:0 0 12px;line-height:1.28;}
+  p.lede{color:var(--muted);font-size:15px;line-height:1.6;margin:0 0 24px;}
+  p.lede b{color:var(--ink);}
+
+  label{display:block;font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:0.5px;margin:0 0 6px;}
+  .field{margin-bottom:16px;}
+  .field-row{display:flex;gap:14px;}
+  .field-row .field{flex:1;}
+  input[type="text"], input[type="email"], input[type="date"], select, textarea{
+    width:100%;padding:12px 14px;font-size:15px;font-family:inherit;
+    border:1.5px solid var(--border);border-radius:8px;background:var(--paper);color:var(--ink);
+  }
+  select{
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235a6472'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center;background-size:18px;padding-right:38px;
+  }
+  select:invalid{color:var(--muted);}
+  textarea{resize:vertical;min-height:90px;font-family:inherit;}
+  input:focus, select:focus, textarea:focus{outline:none;border-color:var(--gold);}
+  .req{color:var(--red);}
+
+  .btn{
+    display:inline-block;width:100%;text-align:center;padding:15px 20px;
+    font-size:15px;font-weight:700;font-family:inherit;border:none;border-radius:8px;cursor:pointer;
+    background:var(--gold);color:var(--navy);transition:background 0.15s ease;
+  }
+  .btn:hover{background:#dcb45c;}
+  .btn:disabled{opacity:0.65;cursor:default;}
+  .err{color:var(--red);font-size:13px;margin:-8px 0 16px;display:none;}
+  .err.show{display:block;}
+
+  .thanks-eyebrow{color:var(--green);font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;margin:0 0 8px;}
+  .thanks-body{color:var(--muted);font-size:15px;line-height:1.65;margin:0 0 20px;}
+  .thanks-body b{color:var(--ink);}
+  .back-link{display:inline-block;color:var(--navy);font-size:14px;font-weight:700;text-decoration:none;border-bottom:1.5px solid var(--gold);}
+
+  .status-line{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-top:16px;padding:10px 12px;background:var(--paper);border-radius:8px;}
+  .status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .status-green .status-dot{background:var(--green);}
+  .status-orange .status-dot{background:var(--orange);}
+  .status-red .status-dot{background:var(--red);}
+
+  @media (max-width:420px){
+    .card{padding:28px 20px;border-radius:12px;}
+    h1{font-size:21px;}
+    .field-row{flex-direction:column;gap:0;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONFIG — same Supabase project as index.html / dashboard.html.
+     ============================================================ */
+  const CONFIG = {
+    supabaseUrl:     'https://ymyslujfjmbzwhwikphh.supabase.co',
+    supabaseAnonKey: 'sb_publishable_e4BXE0e0Q44IYL9wIl2KTA_n9WzWR2W'
+  };
+
+  const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
+
+  const AUDIENCE_SIZES = ['Under 50', '50–150', '150–500', '500+', 'Not sure yet'];
+  const BUDGET_RANGES = ['Under $5k', '$5k–$10k', '$10k–$25k', '$25k+', "Let's discuss"];
+
+  let submitted = false;
+  let submitStatus = null;
+  const app = document.getElementById('app');
+
+  function isConfigured(){
+    return !!(CONFIG.supabaseUrl && !CONFIG.supabaseUrl.startsWith('YOUR_') &&
+      CONFIG.supabaseAnonKey && !CONFIG.supabaseAnonKey.startsWith('YOUR_'));
+  }
+
+  function render(){
+    if (submitted) return renderThanks();
+    return renderForm();
+  }
+
+  function renderForm(){
+    app.innerHTML = `
+      <div class="card">
+        <p class="eyebrow">Speaking Inquiry</p>
+        <h1>Bring the Practice Health framework to your stage</h1>
+        <p class="lede">30 questions, six dimensions, a live scoreboard the room watches fill in real time — built on a dataset that grows with every event. Tell me about yours and I'll follow up within two business days.</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label>Your Name <span class="req">*</span></label>
+            <input type="text" id="f-name" placeholder="Jane Smith">
+          </div>
+          <div class="field">
+            <label>Email <span class="req">*</span></label>
+            <input type="email" id="f-email" placeholder="jane@association.org">
+          </div>
+        </div>
+        <div class="err" id="f-err">Please enter your name and a valid email.</div>
+
+        <div class="field">
+          <label>Organization</label>
+          <input type="text" id="f-org" placeholder="Association, company, or conference name">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Event Name</label>
+            <input type="text" id="f-event-name" placeholder="Annual Conference 2027">
+          </div>
+          <div class="field">
+            <label>Event Date</label>
+            <input type="date" id="f-event-date">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Expected Audience</label>
+            <select id="f-audience">
+              <option value="">Select one…</option>
+              ${AUDIENCE_SIZES.map(a => `<option value="${a}">${a}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field">
+            <label>Budget Range</label>
+            <select id="f-budget">
+              <option value="">Select one…</option>
+              ${BUDGET_RANGES.map(b => `<option value="${b}">${b}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Tell Me About Your Event</label>
+          <textarea id="f-message" placeholder="Who's in the room, what you're hoping the talk delivers, anything else worth knowing."></textarea>
+        </div>
+
+        <button class="btn" id="submitBtn">Send Inquiry</button>
+        <div id="statusLine"></div>
+      </div>
+    `;
+
+    document.getElementById('submitBtn').addEventListener('click', handleSubmit);
+  }
+
+  function renderThanks(){
+    app.innerHTML = `
+      <div class="card">
+        <p class="thanks-eyebrow">Got It</p>
+        <h1>Thanks — I'll be in touch soon.</h1>
+        <p class="thanks-body">Your inquiry is in. I personally review every one and typically reply within <b>two business days</b> with next steps or a few questions.</p>
+        <a class="back-link" href="https://nathanbushmba.com">← Back to nathanbushmba.com</a>
+        <div id="statusLine"></div>
+      </div>
+    `;
+    renderStatusLine();
+  }
+
+  async function handleSubmit(){
+    const name = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    if (!name || !emailValid){
+      document.getElementById('f-err').classList.add('show');
+      return;
+    }
+
+    const row = {
+      contact_name: name,
+      email,
+      organization: document.getElementById('f-org').value.trim() || null,
+      event_name: document.getElementById('f-event-name').value.trim() || null,
+      event_date: document.getElementById('f-event-date').value || null,
+      audience_size: document.getElementById('f-audience').value || null,
+      budget_range: document.getElementById('f-budget').value || null,
+      message: document.getElementById('f-message').value.trim() || null
+    };
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sending…';
+
+    if (!isConfigured()){
+      submitStatus = { level:'orange', message:'Submit skipped — the Supabase CONFIG values in speak.html are not filled in.' };
+      renderStatusLine();
+      btn.disabled = false;
+      btn.textContent = 'Send Inquiry';
+      return;
+    }
+
+    try {
+      const res = await fetch(`${CONFIG.supabaseUrl}/rest/v1/speaker_inquiries`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.supabaseAnonKey,
+          'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row)
+      });
+      if (!res.ok){
+        const text = await res.text();
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      submitStatus = { level:'green', message:'Inquiry sent.' };
+      submitted = true;
+      render();
+    } catch (err){
+      submitStatus = { level:'red', message:`Submit failed: ${err.message}` };
+      renderStatusLine();
+      btn.disabled = false;
+      btn.textContent = 'Send Inquiry';
+      if (DEBUG) console.error('Speaker inquiry insert failed:', err);
+    }
+  }
+
+  function renderStatusLine(){
+    if (!DEBUG) return;
+    const el = document.getElementById('statusLine');
+    if (!el || !submitStatus) return;
+    el.innerHTML = `
+      <div class="status-line status-${submitStatus.level}">
+        <span class="status-dot"></span>${escapeHtml(submitStatus.message)}
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>

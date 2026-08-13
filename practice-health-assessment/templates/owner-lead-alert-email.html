@@ -1,0 +1,97 @@
+<!--
+  EmailJS TEMPLATE SETTINGS (set these in the EmailJS dashboard, not in this file):
+    Subject:    New Assessment Lead: {{name}} ({{overall_score}}/100)
+    From Name:  Practice Health Assessment
+    To Email:   {{to_email}}
+    Reply To:   {{reply_to}}
+-->
+<div style="margin:0;padding:0;background-color:#f7f5f1;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f5f1;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;max-width:560px;width:100%;">
+
+          <tr>
+            <td style="background-color:#0f1b2d;padding:24px 32px;">
+              <p style="margin:0;color:#c9a24b;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">New Lead</p>
+              <h1 style="margin:6px 0 0;color:#ffffff;font-size:20px;">{{name}} just completed the assessment</h1>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:28px 32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin-bottom:24px;">
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;width:120px;">Name</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;">{{name}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;">Email</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;"><a href="mailto:{{email}}" style="color:#1a1f26;">{{email}}</a></td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;">Phone</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;">{{phone}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;">Title</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;">{{title}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;">Organization</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;">{{organization}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#5a6472;font-size:13px;">Completed</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:14px;font-weight:600;">{{completed_at}}</td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;background-color:#f7f5f1;border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:20px;">
+                    <p style="margin:0;color:#5a6472;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Overall Score</p>
+                    <p style="margin:4px 0 0;color:#0f1b2d;font-size:36px;font-weight:800;line-height:1;">{{overall_score}}<span style="font-size:16px;color:#5a6472;">/100</span></p>
+                    <p style="margin:6px 0 0;color:#c9a24b;font-size:14px;font-weight:700;">{{overall_tier}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;">Leadership</td>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{leadership_score}} — {{leadership_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;">Operational</td>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{operational_score}} — {{operational_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;">Communication</td>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{communication_score}} — {{communication_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;">Staffing</td>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{staffing_score}} — {{staffing_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;">Technology &amp; AI</td>
+                  <td style="padding:8px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{technology_score}} — {{technology_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:13px;">Financial</td>
+                  <td style="padding:8px 0;color:#1a1f26;font-size:13px;text-align:right;font-weight:700;">{{financial_score}} — {{financial_tier}}</td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0;color:#5a6472;font-size:13px;line-height:1.5;">
+                Reply-to on this email is already set to {{email}} — just hit reply to reach them directly.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>

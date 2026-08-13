@@ -1,0 +1,94 @@
+<!--
+  EmailJS TEMPLATE SETTINGS (set these in the EmailJS dashboard, not in this file):
+    Subject:    Your Practice Health Score: {{overall_score}}/100 ({{overall_tier}})
+    From Name:  Nathan Bush
+    To Email:   {{to_email}}
+    Reply To:   {{reply_to}}
+-->
+<div style="margin:0;padding:0;background-color:#f7f5f1;font-family:'Segoe UI',Helvetica,Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f7f5f1;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;max-width:560px;width:100%;">
+
+          <tr>
+            <td style="background-color:#0f1b2d;padding:28px 32px;">
+              <p style="margin:0;color:#c9a24b;font-size:13px;letter-spacing:1.5px;text-transform:uppercase;font-weight:600;">Practice Health Assessment</p>
+              <h1 style="margin:6px 0 0;color:#ffffff;font-size:22px;">Your Scorecard, {{name}}</h1>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:32px;">
+              <p style="margin:0 0 16px;color:#1a1f26;font-size:15px;line-height:1.6;">
+                You just gave me thirty honest answers about how your practice actually runs — not how it looks on paper. Here's what they add up to.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0;background-color:#f7f5f1;border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:24px;">
+                    <p style="margin:0;color:#5a6472;font-size:12px;letter-spacing:1px;text-transform:uppercase;">Overall Practice Health</p>
+                    <p style="margin:6px 0 0;color:#0f1b2d;font-size:44px;font-weight:800;line-height:1;">{{overall_score}}<span style="font-size:20px;color:#5a6472;">/100</span></p>
+                    <p style="margin:8px 0 0;color:#c9a24b;font-size:16px;font-weight:700;">{{overall_tier}}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 12px;color:#0f1b2d;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;">Your Six Dimensions</p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;">Leadership</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{leadership_score}}/100 — {{leadership_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;">Operational</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{operational_score}}/100 — {{operational_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;">Communication</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{communication_score}}/100 — {{communication_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;">Staffing</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{staffing_score}}/100 — {{staffing_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;">Technology &amp; AI</td>
+                  <td style="padding:10px 0;border-bottom:1px solid #eee;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{technology_score}}/100 — {{technology_tier}}</td>
+                </tr>
+                <tr>
+                  <td style="padding:10px 0;color:#1a1f26;font-size:14px;">Financial</td>
+                  <td style="padding:10px 0;color:#1a1f26;font-size:14px;text-align:right;font-weight:700;">{{financial_score}}/100 — {{financial_tier}}</td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0;color:#1a1f26;font-size:15px;line-height:1.6;">
+                A score is just a mirror — it doesn't fix anything by itself. If you want to walk through what's actually driving your lowest dimension and what to do about it, grab 20 minutes with me directly.
+              </p>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 8px;">
+                <tr>
+                  <td style="background-color:#c9a24b;border-radius:6px;">
+                    <a href="{{booking_link}}" style="display:inline-block;padding:14px 28px;color:#0f1b2d;font-size:15px;font-weight:700;text-decoration:none;">Talk Through My Scorecard →</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0;color:#5a6472;font-size:13px;line-height:1.5;">
+                — Nathan Bush<br>nathanbushmba.com
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:18px 32px;background-color:#f7f5f1;">
+              <p style="margin:0;color:#9aa3ad;font-size:11px;">Completed {{completed_at}}. Sent because you completed the Practice Health Assessment.</p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>

@@ -1,0 +1,1280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Health Assessment | Nathan Bush</title>
+<meta name="description" content="A six-dimension practice health assessment. Answer 30 questions, get your score, get your scorecard.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  :root{
+    --navy:#0f1b2d;
+    --navy-light:#16283f;
+    --ink:#1a1f26;
+    --muted:#5a6472;
+    --paper:#f7f5f1;
+    --card:#ffffff;
+    --gold:#c9a24b;
+    --gold-light:#e9d9ae;
+    --green:#3fae5a;
+    --orange:#e0952f;
+    --red:#d64545;
+    --border:#e7e2d8;
+    --ember:#c1622e;
+    --ember-light:#f3dccb;
+    --ember-dark:#8f4720;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Inter',Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:24px 16px 48px;
+  }
+  .card{
+    width:100%;
+    max-width:560px;
+    background:var(--card);
+    border-radius:16px;
+    box-shadow:0 8px 30px rgba(15,27,45,0.08);
+    padding:36px 28px;
+    animation:fadeIn 0.35s ease;
+  }
+  @keyframes fadeIn{
+    from{opacity:0;transform:translateY(8px);}
+    to{opacity:1;transform:translateY(0);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;}
+  }
+
+  .eyebrow{
+    color:var(--gold);
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:1.6px;
+    text-transform:uppercase;
+    margin:0 0 8px;
+  }
+  h1{
+    font-size:26px;
+    font-weight:800;
+    color:var(--navy);
+    margin:0 0 12px;
+    line-height:1.25;
+  }
+  p.lede{
+    color:var(--muted);
+    font-size:15px;
+    line-height:1.6;
+    margin:0 0 24px;
+  }
+
+  label{
+    display:block;
+    font-size:12px;
+    font-weight:700;
+    color:var(--navy);
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+    margin:0 0 6px;
+  }
+  .field{margin-bottom:16px;}
+  input[type="text"], input[type="email"], input[type="tel"], select{
+    width:100%;
+    padding:12px 14px;
+    font-size:15px;
+    font-family:inherit;
+    border:1.5px solid var(--border);
+    border-radius:8px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  select{
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235a6472'%3E%3Cpath fill-rule='evenodd' d='M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;
+    background-position:right 12px center;
+    background-size:18px;
+    padding-right:38px;
+  }
+  select:invalid{color:var(--muted);}
+  input:focus, select:focus{
+    outline:none;
+    border-color:var(--gold);
+  }
+  .req{color:var(--red);}
+
+  .btn{
+    display:inline-block;
+    width:100%;
+    text-align:center;
+    padding:15px 20px;
+    font-size:15px;
+    font-weight:700;
+    font-family:inherit;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:var(--navy);
+    color:#fff;
+    transition:transform 0.1s ease, background 0.15s ease;
+  }
+  .btn:hover{background:var(--navy-light);}
+  .btn:active{transform:scale(0.99);}
+  .btn-gold{background:var(--gold);color:var(--navy);}
+  .btn-gold:hover{background:#dcb45c;}
+  .btn-outline{
+    background:transparent;
+    border:1.5px solid var(--border);
+    color:var(--navy);
+    margin-top:10px;
+  }
+  .btn-outline:hover{background:var(--paper);}
+  .err{color:var(--red);font-size:13px;margin:-8px 0 16px;display:none;}
+  .err.show{display:block;}
+
+  /* progress */
+  .progress-wrap{margin-bottom:22px;}
+  .progress-track{
+    height:6px;
+    background:var(--border);
+    border-radius:99px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    background:var(--gold);
+    border-radius:99px;
+    transition:width 0.3s ease;
+  }
+  .progress-label{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:8px;
+    font-weight:600;
+  }
+
+  .q-dimension{
+    font-size:11px;
+    font-weight:700;
+    color:var(--gold);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    margin:0 0 10px;
+  }
+  .q-text{
+    font-size:19px;
+    font-weight:700;
+    color:var(--navy);
+    line-height:1.4;
+    margin:0 0 22px;
+  }
+  .options{display:flex;flex-direction:column;gap:10px;}
+  .option-btn{
+    text-align:left;
+    width:100%;
+    padding:14px 16px;
+    font-size:14.5px;
+    font-family:inherit;
+    line-height:1.4;
+    border:1.5px solid var(--border);
+    border-radius:10px;
+    background:var(--paper);
+    color:var(--ink);
+    cursor:pointer;
+    transition:border-color 0.12s ease, background 0.12s ease;
+  }
+  .option-btn:hover{border-color:var(--gold);background:#fbf7ec;}
+  .option-btn:active{background:var(--gold-light);}
+
+  .q-back{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-size:13px;
+    font-weight:600;
+    cursor:pointer;
+    padding:0;
+    margin-bottom:18px;
+    font-family:inherit;
+  }
+  .q-back:hover{color:var(--navy);}
+
+  /* results */
+  .score-hero{
+    text-align:center;
+    padding:22px 16px 26px;
+    background:var(--paper);
+    border-radius:12px;
+    margin-bottom:26px;
+  }
+  .score-hero .label{
+    font-size:12px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:1px;
+    font-weight:700;
+    margin:0 0 6px;
+  }
+  .score-hero .num{
+    font-size:52px;
+    font-weight:800;
+    color:var(--navy);
+    line-height:1;
+  }
+  .score-hero .num span{font-size:22px;color:var(--muted);font-weight:600;}
+  .score-hero .tier{
+    font-size:16px;
+    font-weight:700;
+    margin-top:6px;
+  }
+  .score-hero .blurb{
+    font-size:13.5px;
+    color:var(--muted);
+    line-height:1.5;
+    margin-top:10px;
+    max-width:420px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+
+  #radarCanvas{
+    display:block;
+    width:100%;
+    max-width:320px;
+    aspect-ratio:1/1;
+    margin:0 auto 24px;
+  }
+
+  .peer-badge{
+    display:flex;align-items:center;gap:14px;
+    background:linear-gradient(135deg, var(--ember-light), #fff 70%);
+    border:1px solid #e9c7ae;border-radius:12px;padding:16px 18px;margin-bottom:22px;
+    display:none;
+  }
+  .peer-badge.show{display:flex;}
+  .peer-badge .pct{font-size:34px;font-weight:800;color:var(--ember-dark);line-height:1;flex-shrink:0;}
+  .peer-badge .txt{font-size:13px;color:var(--ink);line-height:1.45;}
+  .peer-badge .txt b{color:var(--ember-dark);}
+
+  .refer-panel{
+    margin-top:26px;border:1.5px solid var(--ember);border-radius:14px;padding:22px 20px;
+  }
+  .refer-eyebrow{color:var(--ember-dark);font-size:11px;font-weight:700;letter-spacing:1.3px;text-transform:uppercase;margin:0 0 8px;}
+  .refer-title{font-size:18px;font-weight:800;color:var(--navy);margin:0 0 8px;line-height:1.35;}
+  .refer-body{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0 0 16px;}
+  .refer-body b{color:var(--ink);}
+  .link-field{display:flex;gap:8px;margin-bottom:12px;}
+  .link-field input{flex:1;min-width:0;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;color:var(--muted);background:var(--paper);}
+  .copy-btn{padding:10px 14px;border:1.5px solid var(--ember);border-radius:8px;background:#fff;color:var(--ember-dark);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit;}
+  .copy-btn:hover{background:var(--ember-light);}
+  .share-row{display:flex;gap:10px;}
+  .share-row button{flex:1;padding:11px 14px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;border:1.5px solid var(--border);background:#fff;color:var(--navy);font-family:inherit;}
+  .share-row button:hover{border-color:var(--navy);}
+
+  .dim-list{margin-bottom:26px;}
+  .dim-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 0;
+    border-bottom:1px solid var(--border);
+  }
+  .dim-row:last-child{border-bottom:none;}
+  .dim-name{font-size:14px;font-weight:600;color:var(--ink);}
+  .dim-score{font-size:13.5px;font-weight:700;}
+  .dim-bar-track{
+    height:5px;
+    background:var(--border);
+    border-radius:99px;
+    margin-top:6px;
+    overflow:hidden;
+  }
+  .dim-bar-fill{height:100%;border-radius:99px;}
+  .dim-col{flex:1;padding-right:16px;}
+
+  .status-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:16px;
+    padding:10px 12px;
+    background:var(--paper);
+    border-radius:8px;
+  }
+  .status-dot{
+    width:9px;height:9px;border-radius:50%;flex-shrink:0;
+  }
+  .status-green .status-dot{background:var(--green);}
+  .status-orange .status-dot{background:var(--orange);}
+  .status-red .status-dot{background:var(--red);}
+
+  .footer-note{
+    text-align:center;
+    font-size:12px;
+    color:var(--muted);
+    margin-top:22px;
+  }
+
+  @media (max-width:420px){
+    .card{padding:28px 20px;border-radius:12px;}
+    h1{font-size:22px;}
+    .score-hero .num{font-size:44px;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONFIG — fill these four in to turn on email delivery.
+     See README.md for the full EmailJS setup steps.
+     ============================================================ */
+  const CONFIG = {
+    emailPublicKey:   'WZRj_BXIy8VWFXEjE',
+    emailServiceId:   'service_ueqagz9',
+    clientTemplateId: 'template_vmtdc7v',
+    ownerTemplateId:  'template_906f092',
+    ownerEmail:       'Nbush@nathanbushmba.com',
+    bookingLink:      'https://calendar.app.google/2WpHauUz14gBGDpE6',
+    // Dashboard backend — see README.md "Set up the backend (Supabase)".
+    // Both values are safe to expose in client-side code; access to the
+    // data itself is controlled by the RLS policies in supabase-schema.sql,
+    // not by keeping this key secret.
+    supabaseUrl:      'https://ymyslujfjmbzwhwikphh.supabase.co',
+    supabaseAnonKey:  'sb_publishable_e4BXE0e0Q44IYL9wIl2KTA_n9WzWR2W'
+  };
+
+  const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
+
+  // Which presentation this taker belongs to. Nathan generates this link
+  // per-event from the Sessions tab in dashboard.html; without it, results
+  // are grouped under 'general'.
+  const SESSION_SLUG = new URLSearchParams(window.location.search).get('session') || 'general';
+
+  // The referral code of whoever sent this person here, if anyone —
+  // carried on their own link (see the "Refer A Colleague" panel below).
+  const REFERRED_BY = new URLSearchParams(window.location.search).get('ref') || null;
+
+  /* ============================================================
+     DIMENSIONS & QUESTIONS — see CLAUDE.md before editing.
+     Exactly 5 questions per dimension. Options are ordered
+     weakest (score 1) to strongest (score 4).
+     ============================================================ */
+  const PRACTICE_TYPES = [
+    'Dental',
+    'Chiropractic',
+    'Physical Therapy',
+    'Vision / Optometry',
+    'Medical / Primary Care',
+    'Veterinary',
+    'Other'
+  ];
+
+  const DIMENSIONS = [
+    { key:'leadership',    label:'Leadership',      short:'Leadership' },
+    { key:'operational',   label:'Operational',     short:'Operations' },
+    { key:'communication', label:'Communication',   short:'Comms' },
+    { key:'staffing',      label:'Staffing',        short:'Staffing' },
+    { key:'technology',    label:'Technology & AI', short:'Tech & AI' },
+    { key:'financial',     label:'Financial',       short:'Financial' }
+  ];
+
+  const QUESTIONS = [
+    // LEADERSHIP
+    { dimension:'leadership', text:"When a major decision needs to be made, what typically happens?", options:[
+      "Everything stops until the owner decides personally",
+      "The owner decides, but it takes days to circle back to the team",
+      "Leaders decide within their lane; the owner is looped in after",
+      "Clear decision rights exist — the right person decides fast, no bottleneck"
+    ]},
+    { dimension:'leadership', text:"How would your team describe the practice's direction for the next 12 months?", options:[
+      "No idea — we're reacting week to week",
+      "There's a rough idea, but nothing written down or shared",
+      "There's a plan, but only leadership has really seen it",
+      "Everyone can tell you the top 2-3 priorities for the year"
+    ]},
+    { dimension:'leadership', text:"When something goes wrong, what's the first instinct in the building?", options:[
+      "Find out whose fault it was",
+      "Fix it quietly and move on, no follow-up",
+      "Fix it and mention it at the next meeting",
+      "Fix it, then change the process so it doesn't happen again"
+    ]},
+    { dimension:'leadership', text:"How involved is the owner or lead doctor in day-to-day operations?", options:[
+      "In every decision, every day — nothing moves without them",
+      "Mostly hands-on; the practice struggles when they're out",
+      "Hands-on in a few key areas, delegated elsewhere",
+      "The practice runs well even when the owner is out for a week"
+    ]},
+    { dimension:'leadership', text:"How often does leadership get real, unfiltered feedback from the team?", options:[
+      "Never — people keep concerns to themselves",
+      "Occasionally, usually after something's already gone wrong",
+      "Sometimes, in scheduled reviews",
+      "Regularly, through open channels people actually use"
+    ]},
+
+    // OPERATIONAL
+    { dimension:'operational', text:"Describe a typical patient's path from scheduling to checkout.", options:[
+      "It varies wildly depending on who's working that day",
+      "There's a general idea but no documented process",
+      "A documented process exists and is mostly followed",
+      "Documented, followed, and measured for bottlenecks"
+    ]},
+    { dimension:'operational', text:"How often does a task get dropped because \"I thought someone else had it\"?", options:[
+      "Constantly — this is a daily fire",
+      "Weekly",
+      "Occasionally",
+      "Rarely — ownership is clear at every handoff"
+    ]},
+    { dimension:'operational', text:"What happens when your busiest provider calls in sick?", options:[
+      "The day falls apart",
+      "A big scramble, but it gets handled",
+      "Minor disruption, a backup plan exists",
+      "Barely noticeable — coverage plan just kicks in"
+    ]},
+    { dimension:'operational', text:"How do you know if a workflow is actually working?", options:[
+      "We don't measure it",
+      "Gut feeling and anecdotes",
+      "We track a few numbers occasionally",
+      "We track key metrics and review them on a schedule"
+    ]},
+    { dimension:'operational', text:"How well does the schedule match actual demand?", options:[
+      "Constant overbooking or big gaps",
+      "Frequent mismatch, reactive fixes",
+      "Mostly aligned, some rough days",
+      "Tightly matched, adjusted proactively"
+    ]},
+
+    // COMMUNICATION
+    { dimension:'communication', text:"How does information travel between front desk, clinical, and billing?", options:[
+      "It doesn't — each area is its own island",
+      "Word of mouth, often gets lost",
+      "Some shared systems, some gaps",
+      "Shared systems everyone actually uses and trusts"
+    ]},
+    { dimension:'communication', text:"When a patient has a bad experience, how does the team find out?", options:[
+      "They usually don't",
+      "Only if the patient complains loudly",
+      "Through a survey or review, after the fact",
+      "Real-time flagging that gets addressed the same day"
+    ]},
+    { dimension:'communication', text:"How effective are your team meetings?", options:[
+      "We don't have them, or they're a waste of time",
+      "They happen but rarely change anything",
+      "Useful, but not consistent",
+      "Focused, consistent, and drive real action"
+    ]},
+    { dimension:'communication', text:"How clearly do patients understand their treatment plan and costs?", options:[
+      "Confusion is common and leads to billing disputes",
+      "Explained verbally, easy to forget",
+      "A written summary is given most of the time",
+      "Clear, consistent, and documented every time"
+    ]},
+    { dimension:'communication', text:"If a staff member has a concern about a coworker or process, what happens?", options:[
+      "They vent to other staff instead of raising it",
+      "They mention it once and let it drop",
+      "There's a way to raise it, sometimes used",
+      "There's a trusted, used channel that leads to a response"
+    ]},
+
+    // STAFFING
+    { dimension:'staffing', text:"How long does it typically take to fill an open role?", options:[
+      "Months, and we settle for who's available",
+      "Weeks to months, a hard search",
+      "A few weeks, solid candidates",
+      "Fast — we usually have a pipeline already"
+    ]},
+    { dimension:'staffing', text:"What happens in someone's first 90 days on the job?", options:[
+      "Sink or swim, minimal training",
+      "Shadowing with no real structure",
+      "A basic onboarding checklist",
+      "A structured onboarding plan with checkpoints"
+    ]},
+    { dimension:'staffing', text:"How would you describe turnover on your team this past year?", options:[
+      "High — we're constantly replacing people",
+      "Higher than we'd like",
+      "Normal, a few expected departures",
+      "Low — people stay and grow here"
+    ]},
+    { dimension:'staffing', text:"How do your best performers get recognized or advanced?", options:[
+      "They don't — same treatment as everyone",
+      "Informal praise, no real path forward",
+      "Occasional recognition, some growth opportunities",
+      "Clear growth paths and consistent recognition"
+    ]},
+    { dimension:'staffing', text:"If your #2 person left tomorrow, what would happen?", options:[
+      "Major crisis — no one else knows their role",
+      "A big scramble to cover",
+      "Manageable with some strain",
+      "A cross-trained backup steps in smoothly"
+    ]},
+
+    // TECHNOLOGY & AI
+    { dimension:'technology', text:"How well does your practice management or EHR system actually get used?", options:[
+      "Bare minimum, most staff avoid it",
+      "Used for basics only, lots of workarounds",
+      "Used well by most of the team",
+      "Fully utilized, including reporting features"
+    ]},
+    { dimension:'technology', text:"How much manual, repetitive work still happens that could be automated?", options:[
+      "A ton — most of our processes are manual",
+      "Quite a bit, we haven't prioritized fixing it",
+      "Some — we've automated the big ones",
+      "Very little — we automate proactively"
+    ]},
+    { dimension:'technology', text:"Has your practice adopted any AI tools for scheduling, documentation, or communication?", options:[
+      "No, and no plans to",
+      "We've talked about it, nothing implemented",
+      "One or two tools in limited use",
+      "Actively using AI tools that save real time"
+    ]},
+    { dimension:'technology', text:"How confident is your team using the technology you already pay for?", options:[
+      "Not confident — most features go unused",
+      "Basic comfort, they avoid advanced features",
+      "Comfortable with most of what's available",
+      "Confident and proactive about new features"
+    ]},
+    { dimension:'technology', text:"How well protected is your patient and business data?", options:[
+      "Not sure, or no real plan",
+      "Basic precautions, nothing formal",
+      "Documented policies, mostly followed",
+      "Strong, tested, and regularly reviewed"
+    ]},
+
+    // FINANCIAL
+    { dimension:'financial', text:"How current is your view of the practice's cash position?", options:[
+      "We find out at tax time",
+      "Monthly, after the books close",
+      "A weekly snapshot",
+      "Real-time or near real-time visibility"
+    ]},
+    { dimension:'financial', text:"How would you describe your collections process?", options:[
+      "Inconsistent, with lots of aging AR",
+      "Follow-up happens, but late",
+      "Mostly on time, occasional slippage",
+      "Tight, proactive, minimal aging AR"
+    ]},
+    { dimension:'financial', text:"Do you know your true cost to deliver care per visit?", options:[
+      "No idea",
+      "A rough estimate at best",
+      "A reasonably confident number",
+      "Precise, tracked, and used in pricing decisions"
+    ]},
+    { dimension:'financial', text:"How is pricing set for your services?", options:[
+      "Copied from competitors or unchanged for years",
+      "Adjusted occasionally, without much data",
+      "Reviewed periodically against costs and market",
+      "Actively managed based on cost, demand, and value"
+    ]},
+    { dimension:'financial', text:"If revenue dropped 20% next month, how would you know — and how fast?", options:[
+      "We'd notice when we couldn't make payroll",
+      "We'd notice within a few weeks",
+      "We'd catch it within days",
+      "We'd see it immediately via tracked KPIs"
+    ]}
+  ];
+
+  const TIERS = [
+    { min:80, max:100, label:'Strong',   color:'var(--green)',  hex:'#3fae5a',
+      blurb:"Your practice is operating like the exception, not the rule. Most owners never get here — protect what you've built and use this edge before competitors catch up." },
+    { min:60, max:79,  label:'Building', color:'var(--gold)',   hex:'#c9a24b',
+      blurb:"You've got real strength, but there are cracks doing more damage than you think. This is the most common place for a practice to plateau." },
+    { min:40, max:59,  label:'Strained', color:'var(--orange)', hex:'#e0952f',
+      blurb:"Something in here is costing you more than you realize — probably money, probably people. Worth a real look before it compounds." },
+    { min:0,  max:39,  label:'Critical', color:'var(--red)',    hex:'#d64545',
+      blurb:"This isn't a tune-up situation. Left alone, this dimension will define what happens to the rest of the practice." }
+  ];
+
+  function getTier(score){
+    return TIERS.find(t => score >= t.min && score <= t.max) || TIERS[TIERS.length-1];
+  }
+
+  /* ============================================================
+     STATE (in-memory only — no localStorage/sessionStorage)
+     ============================================================ */
+  let step = 'start';       // 'start' | 0..29 (question index) | 'results'
+  let contact = { name:'', email:'', phone:'', title:'', organization:'', practiceType:'' };
+  let answers = new Array(QUESTIONS.length).fill(null);
+  let scores = null;
+  let sendStatus = null;    // { level:'green'|'orange'|'red', message:string } — email delivery
+  let dbStatus = null;      // { level:'green'|'orange'|'red', message:string } — dashboard save
+  let referralCode = null;  // this taker's own shareable code, set once saveSubmission() succeeds
+  let peerStanding = null;  // { percentile, sampleSize } — set once loadPeerStanding() resolves
+  let submissionId = null;  // this taker's own row id, set once saveSubmission() succeeds — used only to flag a booking-link click
+
+  const app = document.getElementById('app');
+
+  /* ============================================================
+     SCORING
+     ============================================================ */
+  function calculateScores(){
+    const byDim = {};
+    DIMENSIONS.forEach(d => { byDim[d.key] = { sum:0, count:0 }; });
+
+    QUESTIONS.forEach((q, i) => {
+      const val = answers[i] || 0;
+      byDim[q.dimension].sum += val;
+      byDim[q.dimension].count += 1;
+    });
+
+    const result = {};
+    let total = 0;
+    DIMENSIONS.forEach(d => {
+      const sum = byDim[d.key].sum;
+      const score = Math.round(((sum - 5) / (20 - 5)) * 100);
+      result[d.key] = Math.max(0, Math.min(100, score));
+      total += result[d.key];
+    });
+    result.overall = Math.round(total / DIMENSIONS.length);
+    return result;
+  }
+
+  /* ============================================================
+     RENDER
+     ============================================================ */
+  function render(){
+    if (step === 'start') return renderStart();
+    if (step === 'results') return renderResults();
+    return renderQuestion(step);
+  }
+
+  function renderStart(){
+    app.innerHTML = `
+      <div class="card">
+        <p class="eyebrow">Practice Health Assessment</p>
+        <h1>What's actually running your practice?</h1>
+        <p class="lede">30 questions. Six dimensions. About three minutes. At the end you'll get a real score, a radar chart, and a scorecard you can download — plus a copy by email.</p>
+
+        <div class="field">
+          <label>Name <span class="req">*</span></label>
+          <input type="text" id="f-name" placeholder="Jane Smith" value="${escapeAttr(contact.name)}">
+        </div>
+        <div class="field">
+          <label>Email <span class="req">*</span></label>
+          <input type="email" id="f-email" placeholder="jane@practice.com" value="${escapeAttr(contact.email)}">
+        </div>
+        <div class="err" id="f-err">Please enter your name, a valid email, and your practice type.</div>
+        <div class="field">
+          <label>Phone</label>
+          <input type="tel" id="f-phone" placeholder="(555) 555-5555" value="${escapeAttr(contact.phone)}">
+        </div>
+        <div class="field">
+          <label>Title</label>
+          <input type="text" id="f-title" placeholder="Owner, Office Manager, ..." value="${escapeAttr(contact.title)}">
+        </div>
+        <div class="field">
+          <label>Practice / Organization</label>
+          <input type="text" id="f-org" placeholder="Practice name" value="${escapeAttr(contact.organization)}">
+        </div>
+        <div class="field">
+          <label>Practice Type <span class="req">*</span></label>
+          <select id="f-practice-type">
+            <option value="" ${!contact.practiceType ? 'selected' : ''} disabled>Select one…</option>
+            ${PRACTICE_TYPES.map(t => `<option value="${escapeAttr(t)}" ${contact.practiceType === t ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
+          </select>
+        </div>
+
+        <button class="btn btn-gold" id="startBtn">Start the Assessment</button>
+        <p class="footer-note" style="margin-top:14px;">We'll email you your results and may follow up about them. We never sell your data.</p>
+      </div>
+    `;
+
+    document.getElementById('startBtn').addEventListener('click', () => {
+      const name = document.getElementById('f-name').value.trim();
+      const email = document.getElementById('f-email').value.trim();
+      const practiceType = document.getElementById('f-practice-type').value;
+      const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+      if (!name || !emailValid || !practiceType){
+        document.getElementById('f-err').classList.add('show');
+        return;
+      }
+
+      contact = {
+        name,
+        email,
+        phone: document.getElementById('f-phone').value.trim(),
+        title: document.getElementById('f-title').value.trim(),
+        organization: document.getElementById('f-org').value.trim(),
+        practiceType
+      };
+      step = 0;
+      render();
+    });
+  }
+
+  function renderQuestion(index){
+    const q = QUESTIONS[index];
+    const dim = DIMENSIONS.find(d => d.key === q.dimension);
+    const pct = Math.round((index / QUESTIONS.length) * 100);
+
+    app.innerHTML = `
+      <div class="card">
+        ${index > 0 ? '<button class="q-back" id="backBtn">← Back</button>' : ''}
+        <div class="progress-wrap">
+          <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="progress-label">
+            <span>Question ${index + 1} of ${QUESTIONS.length}</span>
+            <span>${pct}%</span>
+          </div>
+        </div>
+        <p class="q-dimension">${dim.label}</p>
+        <p class="q-text">${escapeHtml(q.text)}</p>
+        <div class="options">
+          ${q.options.map((opt, i) => `
+            <button class="option-btn" data-score="${i + 1}">${escapeHtml(opt)}</button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    if (index > 0){
+      document.getElementById('backBtn').addEventListener('click', () => {
+        step = index - 1;
+        render();
+      });
+    }
+
+    document.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        answers[index] = parseInt(btn.getAttribute('data-score'), 10);
+        if (index + 1 < QUESTIONS.length){
+          step = index + 1;
+          render();
+        } else {
+          finishAssessment();
+        }
+      });
+    });
+  }
+
+  function finishAssessment(){
+    scores = calculateScores();
+    step = 'results';
+    render();
+    sendResults();
+    saveSubmission();
+  }
+
+  function renderResults(){
+    const overallTier = getTier(scores.overall);
+
+    app.innerHTML = `
+      <div class="card">
+        <p class="eyebrow">Your Results</p>
+        <h1>Practice Health Scorecard</h1>
+
+        <div class="score-hero">
+          <p class="label">Overall Practice Health</p>
+          <p class="num">${scores.overall}<span>/100</span></p>
+          <p class="tier" style="color:${overallTier.hex}">${overallTier.label}</p>
+          <p class="blurb">${overallTier.blurb}</p>
+        </div>
+
+        <div id="peerBadge" class="peer-badge"></div>
+
+        <canvas id="radarCanvas" width="320" height="320"></canvas>
+
+        <div class="dim-list">
+          ${DIMENSIONS.map(d => {
+            const s = scores[d.key];
+            const t = getTier(s);
+            return `
+              <div class="dim-row">
+                <div class="dim-col">
+                  <div class="dim-name">${d.label}</div>
+                  <div class="dim-bar-track"><div class="dim-bar-fill" style="width:${s}%;background:${t.hex}"></div></div>
+                </div>
+                <div class="dim-score" style="color:${t.hex}">${s} — ${t.label}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <button class="btn btn-gold" id="downloadBtn">Download Your Scorecard (JPEG)</button>
+        <a class="btn btn-outline" id="bookBtn" href="${escapeAttr(CONFIG.bookingLink)}" target="_blank" rel="noopener" style="text-decoration:none;display:block;">Talk Through My Scorecard →</a>
+
+        <div id="referPanel" class="refer-panel"></div>
+
+        <p class="footer-note">A copy of these results has been sent to ${escapeHtml(contact.email)}.</p>
+        <div id="statusLine"></div>
+      </div>
+    `;
+
+    drawRadarCanvas(document.getElementById('radarCanvas'), scores);
+
+    document.getElementById('downloadBtn').addEventListener('click', downloadScorecard);
+    document.getElementById('bookBtn').addEventListener('click', flagBookingClick);
+
+    renderPeerBadge();
+    renderReferPanel();
+    renderStatusLine();
+  }
+
+  function renderPeerBadge(){
+    const el = document.getElementById('peerBadge');
+    if (!el) return;
+    if (!peerStanding || peerStanding.sampleSize < 5 || peerStanding.percentile === null){
+      el.classList.remove('show');
+      el.innerHTML = '';
+      return;
+    }
+    el.classList.add('show');
+    el.innerHTML = `
+      <div class="pct">${peerStanding.percentile}%</div>
+      <div class="txt">You scored higher than <b>${peerStanding.percentile}% of ${escapeHtml(contact.practiceType)} practices</b> in our database — ${peerStanding.sampleSize.toLocaleString()} owners and counting.</div>
+    `;
+  }
+
+  function renderReferPanel(){
+    const el = document.getElementById('referPanel');
+    if (!el) return;
+    const linkReady = !!referralCode;
+    const link = linkReady
+      ? `${location.origin}${location.pathname}?session=${encodeURIComponent(SESSION_SLUG)}&ref=${encodeURIComponent(referralCode)}`
+      : '';
+
+    el.innerHTML = `
+      <p class="refer-eyebrow">Refer A Colleague</p>
+      <p class="refer-title">Know a practice owner who needs to see this?</p>
+      <p class="refer-body">Send them your link. Refer <b>3</b> and I'll walk through your scorecard with you personally — free.</p>
+      <div class="link-field">
+        <input readonly id="referLinkInput" value="${linkReady ? escapeAttr(link) : 'Generating your link…'}">
+        <button class="copy-btn" id="copyReferBtn" ${linkReady ? '' : 'disabled'}>Copy</button>
+      </div>
+      <div class="share-row">
+        <button id="linkedinShareBtn" ${linkReady ? '' : 'disabled'}>Share on LinkedIn</button>
+        <button id="textShareBtn" ${linkReady ? '' : 'disabled'}>Text the Link</button>
+      </div>
+    `;
+
+    if (linkReady){
+      document.getElementById('copyReferBtn').addEventListener('click', () => {
+        navigator.clipboard.writeText(link).then(() => {
+          const btn = document.getElementById('copyReferBtn');
+          const orig = btn.textContent;
+          btn.textContent = 'Copied';
+          setTimeout(() => { btn.textContent = orig; }, 1400);
+        });
+      });
+      document.getElementById('linkedinShareBtn').addEventListener('click', () => {
+        window.open('https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(link), '_blank', 'noopener');
+      });
+      document.getElementById('textShareBtn').addEventListener('click', () => {
+        window.location.href = 'sms:?&body=' + encodeURIComponent('Take the Practice Health Assessment — takes 3 minutes: ' + link);
+      });
+    }
+  }
+
+  function statusLineHtml(status, pendingLabel){
+    if (!status){
+      return `<div class="status-line"><span class="status-dot" style="background:#aaa"></span>${pendingLabel}</div>`;
+    }
+    return `
+      <div class="status-line status-${status.level}">
+        <span class="status-dot"></span>${escapeHtml(status.message)}
+      </div>
+    `;
+  }
+
+  function renderStatusLine(){
+    if (!DEBUG) return;
+    const el = document.getElementById('statusLine');
+    if (!el) return;
+    el.innerHTML =
+      statusLineHtml(sendStatus, 'Sending results...') +
+      statusLineHtml(dbStatus, 'Saving to dashboard...');
+  }
+
+  /* ============================================================
+     RADAR CHART (canvas, no chart library)
+     ============================================================ */
+  function drawRadarOnCtx(ctx, cx, cy, maxR, scoresByDim, labelFont){
+    const n = DIMENSIONS.length;
+    const angleFor = i => -Math.PI / 2 + i * (2 * Math.PI / n);
+
+    // grid rings
+    ctx.strokeStyle = 'rgba(15,27,45,0.14)';
+    ctx.lineWidth = 1;
+    [0.2, 0.4, 0.6, 0.8, 1].forEach(frac => {
+      ctx.beginPath();
+      for (let i = 0; i <= n; i++){
+        const a = angleFor(i % n);
+        const r = maxR * frac;
+        const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    });
+
+    // axes
+    DIMENSIONS.forEach((d, i) => {
+      const a = angleFor(i);
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + maxR * Math.cos(a), cy + maxR * Math.sin(a));
+      ctx.strokeStyle = 'rgba(15,27,45,0.14)';
+      ctx.stroke();
+    });
+
+    // data polygon
+    ctx.beginPath();
+    DIMENSIONS.forEach((d, i) => {
+      const a = angleFor(i);
+      const r = maxR * (scoresByDim[d.key] / 100);
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(201,162,75,0.35)';
+    ctx.strokeStyle = '#c9a24b';
+    ctx.lineWidth = 2;
+    ctx.fill();
+    ctx.stroke();
+
+    // dots
+    DIMENSIONS.forEach((d, i) => {
+      const a = angleFor(i);
+      const r = maxR * (scoresByDim[d.key] / 100);
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#c9a24b';
+      ctx.fill();
+    });
+
+    // labels
+    ctx.font = labelFont || '600 11px Inter, sans-serif';
+    ctx.fillStyle = '#0f1b2d';
+    DIMENSIONS.forEach((d, i) => {
+      const a = angleFor(i);
+      const r = maxR * 1.24;
+      const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      ctx.textAlign = Math.cos(a) > 0.3 ? 'left' : Math.cos(a) < -0.3 ? 'right' : 'center';
+      ctx.textBaseline = Math.sin(a) > 0.3 ? 'top' : Math.sin(a) < -0.3 ? 'bottom' : 'middle';
+      ctx.fillText(d.short, x, y);
+    });
+  }
+
+  function drawRadarCanvas(canvas, scoresByDim){
+    const dpr = window.devicePixelRatio || 1;
+    const size = canvas.clientWidth || 320;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    drawRadarOnCtx(ctx, size / 2, size / 2, size * 0.33, scoresByDim);
+  }
+
+  /* ============================================================
+     JPEG SCORECARD DOWNLOAD
+     ============================================================ */
+  function downloadScorecard(){
+    const W = 1000, H = 1360;
+    const canvas = document.createElement('canvas');
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    // background
+    ctx.fillStyle = '#f7f5f1';
+    ctx.fillRect(0, 0, W, H);
+
+    // header band
+    ctx.fillStyle = '#0f1b2d';
+    ctx.fillRect(0, 0, W, 190);
+    ctx.fillStyle = '#c9a24b';
+    ctx.font = '700 20px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('PRACTICE HEALTH ASSESSMENT', 50, 70);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 40px Inter, sans-serif';
+    ctx.fillText(contact.name || 'Your Scorecard', 50, 125);
+    ctx.font = '500 16px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.fillText(contact.organization || '', 50, 158);
+
+    // overall score block
+    const overallTier = getTier(scores.overall);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#5a6472';
+    ctx.font = '700 14px Inter, sans-serif';
+    ctx.fillText('OVERALL PRACTICE HEALTH', W / 2, 250);
+    ctx.fillStyle = '#0f1b2d';
+    ctx.font = '800 90px Inter, sans-serif';
+    ctx.fillText(String(scores.overall), W / 2, 350);
+    ctx.font = '700 24px Inter, sans-serif';
+    ctx.fillStyle = overallTier.hex;
+    ctx.fillText(overallTier.label, W / 2, 388);
+
+    // radar chart
+    drawRadarOnCtx(ctx, W / 2, 620, 190, scores, '700 15px Inter, sans-serif');
+
+    // dimension list
+    let y = 880;
+    ctx.textAlign = 'left';
+    DIMENSIONS.forEach(d => {
+      const s = scores[d.key];
+      const t = getTier(s);
+
+      ctx.fillStyle = '#1a1f26';
+      ctx.font = '600 20px Inter, sans-serif';
+      ctx.fillText(d.label, 60, y);
+
+      // bar track
+      ctx.fillStyle = '#e7e2d8';
+      ctx.fillRect(60, y + 14, 620, 10);
+      ctx.fillStyle = t.hex;
+      ctx.fillRect(60, y + 14, 620 * (s / 100), 10);
+
+      ctx.textAlign = 'right';
+      ctx.fillStyle = t.hex;
+      ctx.font = '700 20px Inter, sans-serif';
+      ctx.fillText(`${s} — ${t.label}`, W - 60, y);
+      ctx.textAlign = 'left';
+
+      y += 62;
+    });
+
+    // footer
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#5a6472';
+    ctx.font = '500 15px Inter, sans-serif';
+    ctx.fillText('nathanbushmba.com/assessment', W / 2, H - 40);
+
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const link = document.createElement('a');
+    const safeName = (contact.name || 'scorecard').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    link.href = dataUrl;
+    link.download = `practice-health-scorecard-${safeName || 'results'}.jpg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  /* ============================================================
+     EMAILJS
+     ============================================================ */
+  function isConfigured(){
+    const vals = [CONFIG.emailPublicKey, CONFIG.emailServiceId, CONFIG.clientTemplateId, CONFIG.ownerTemplateId];
+    return vals.every(v => v && !v.startsWith('YOUR_'));
+  }
+
+  function buildTemplateParams(){
+    const params = {
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone || '—',
+      title: contact.title || '—',
+      organization: contact.organization || '—',
+      practice_type: contact.practiceType || '—',
+      overall_score: scores.overall,
+      overall_tier: getTier(scores.overall).label,
+      booking_link: CONFIG.bookingLink,
+      owner_email: CONFIG.ownerEmail,
+      completed_at: new Date().toLocaleString()
+    };
+    DIMENSIONS.forEach(d => {
+      params[`${d.key}_score`] = scores[d.key];
+      params[`${d.key}_tier`] = getTier(scores[d.key]).label;
+    });
+    return params;
+  }
+
+  async function sendResults(){
+    if (!isConfigured()){
+      sendStatus = { level:'orange', message:'Email skipped — the four CONFIG values in index.html are not all filled in.' };
+      renderStatusLine();
+      return;
+    }
+
+    try {
+      emailjs.init({ publicKey: CONFIG.emailPublicKey });
+    } catch (e){
+      // ignore; send() below will surface the real error
+    }
+
+    const base = buildTemplateParams();
+
+    try {
+      await emailjs.send(CONFIG.emailServiceId, CONFIG.clientTemplateId, {
+        ...base,
+        to_email: contact.email,
+        reply_to: CONFIG.ownerEmail
+      });
+      await emailjs.send(CONFIG.emailServiceId, CONFIG.ownerTemplateId, {
+        ...base,
+        to_email: CONFIG.ownerEmail,
+        reply_to: contact.email
+      });
+      sendStatus = { level:'green', message:'Both emails accepted by EmailJS. Check your inbox and spam.' };
+    } catch (err){
+      const detail = (err && (err.text || err.message)) ? (err.text || err.message) : JSON.stringify(err);
+      sendStatus = { level:'red', message:`EmailJS rejected the send: ${detail}` };
+      if (DEBUG) console.error('EmailJS send failed:', err);
+    }
+    renderStatusLine();
+  }
+
+  /* ============================================================
+     DASHBOARD BACKEND (Supabase)
+     Saves the same result the emails already carry, so it shows
+     up in dashboard.html — see README.md to configure.
+     ============================================================ */
+  function isDbConfigured(){
+    return !!(CONFIG.supabaseUrl && !CONFIG.supabaseUrl.startsWith('YOUR_') &&
+      CONFIG.supabaseAnonKey && !CONFIG.supabaseAnonKey.startsWith('YOUR_'));
+  }
+
+  function slugifyName(str){
+    const s = String(str).toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    return s || 'you';
+  }
+  function randomSuffix(){
+    return Math.random().toString(36).slice(2, 6);
+  }
+
+  async function saveSubmission(attemptCode, attemptsLeft){
+    if (!isDbConfigured()){
+      dbStatus = { level:'orange', message:'Data save skipped — the Supabase CONFIG values in index.html are not filled in.' };
+      renderStatusLine();
+      return;
+    }
+
+    const code = attemptCode || `${slugifyName(contact.name)}-${randomSuffix()}`;
+    const remaining = attemptsLeft === undefined ? 5 : attemptsLeft;
+
+    const row = {
+      session_slug: SESSION_SLUG,
+      name: contact.name,
+      email: contact.email,
+      phone: contact.phone || null,
+      title: contact.title || null,
+      organization: contact.organization || null,
+      practice_type: contact.practiceType || null,
+      referral_code: code,
+      referred_by: REFERRED_BY,
+      leadership_score: scores.leadership,
+      operational_score: scores.operational,
+      communication_score: scores.communication,
+      staffing_score: scores.staffing,
+      technology_score: scores.technology,
+      financial_score: scores.financial,
+      overall_score: scores.overall
+    };
+
+    try {
+      const res = await fetch(`${CONFIG.supabaseUrl}/rest/v1/submissions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.supabaseAnonKey,
+          'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(row)
+      });
+      if (!res.ok){
+        const text = await res.text();
+        // referral_code collision (extremely unlikely, 4-char suffix) — regenerate and retry.
+        if (res.status === 409 && remaining > 0){
+          return saveSubmission(`${slugifyName(contact.name)}-${randomSuffix()}`, remaining - 1);
+        }
+        throw new Error(text || `HTTP ${res.status}`);
+      }
+      const saved = await res.json();
+      referralCode = (saved && saved[0] && saved[0].referral_code) || code;
+      submissionId = saved && saved[0] && saved[0].id;
+      dbStatus = { level:'green', message:'Saved to your dashboard.' };
+      renderReferPanel();
+      loadPeerStanding();
+    } catch (err){
+      dbStatus = { level:'red', message:`Dashboard save failed: ${err.message}` };
+      if (DEBUG) console.error('Supabase insert failed:', err);
+    }
+    renderStatusLine();
+  }
+
+  async function loadPeerStanding(){
+    if (!isDbConfigured() || !contact.practiceType) return;
+    try {
+      const res = await fetch(`${CONFIG.supabaseUrl}/rest/v1/rpc/get_peer_percentile`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': CONFIG.supabaseAnonKey,
+          'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`
+        },
+        body: JSON.stringify({ p_practice_type: contact.practiceType, p_score: scores.overall })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data && data.percentile !== null && data.percentile !== undefined){
+        peerStanding = { percentile: data.percentile, sampleSize: data.sample_size };
+        renderPeerBadge();
+      }
+    } catch (err){
+      if (DEBUG) console.error('Peer percentile lookup failed:', err);
+    }
+  }
+
+  let bookingClickFlagged = false;
+  function flagBookingClick(){
+    // Fire-and-forget: the link's own href already handles navigation,
+    // this just records the click. Never blocks or delays the click.
+    if (bookingClickFlagged || !isDbConfigured() || !submissionId) return;
+    bookingClickFlagged = true;
+    fetch(`${CONFIG.supabaseUrl}/rest/v1/submissions?id=eq.${submissionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': CONFIG.supabaseAnonKey,
+        'Authorization': `Bearer ${CONFIG.supabaseAnonKey}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ booking_clicked: true, booking_clicked_at: new Date().toISOString() })
+    }).catch(err => { if (DEBUG) console.error('Booking-click flag failed:', err); });
+  }
+
+  /* ============================================================
+     UTIL
+     ============================================================ */
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+  function escapeAttr(str){
+    return escapeHtml(str).replace(/"/g, '&quot;');
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
